@@ -1,0 +1,22 @@
+{
+    "name": "from-zero-to-computer",
+    "version": "1.0.0",
+    "description": "From Zero to Computer TS",
+    "author": "Sereno",
+    "license": "ISC",
+    "@std/esm": "cjs",
+    "main": "main.js",
+    "dependencies": {
+        "fast-check": "^1.16.0",
+        "pure-rand": "^1.6.2"
+    },
+    "devDependencies": {
+        "npm": "^6.10.3",
+        "ts-node": "^8.3.0",
+        "typescript": "^3.5.3"
+    },
+    "scripts": {
+        "build": "tsc",
+        "start": "npm run build; node build/main.js"
+    }
+}

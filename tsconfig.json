@@ -1,0 +1,25 @@
+{
+    "compilerOptions":{
+       "target":"es2017",
+       "module":"commonjs",
+       "declaration":false,
+       "noLib":false,
+       "emitDecoratorMetadata":true,
+       "experimentalDecorators":true,
+       "sourceMap":true,
+       "pretty":true,
+       "noImplicitAny":true,
+       "noImplicitReturns":false,
+       "noImplicitUseStrict":false,
+       "strict": true,
+       "outDir":"build/",
+       "baseUrl":"src/"
+    },
+    "include":[
+       "src/**/*"
+    ],
+    "exclude":[
+       "node_modules"
+    ],
+    "compileOnSave":true
+ }
