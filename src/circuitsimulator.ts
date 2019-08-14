@@ -81,6 +81,10 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     private readonly _dffDelay = 0
     private readonly _gateDelay = 0
 
+    bus(size: number) {
+        return new Bus(Array(size).fill(0).map(_ => new Wire))
+    }
+
     posedge(w: Wire) {
         const lastTick = this.tick;
         do { this.forward() } while (!w.getSignal() || lastTick === this.tick);
@@ -99,6 +103,10 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
             this.schedule(() => to.setSignal(sig), delay)
         })
     }
+
+    // ----------------------------------------------
+    // Combinatorial Logic
+    // ----------------------------------------------
 
     inverter(input: Wire) {
         const out = new Wire
@@ -128,20 +136,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     nor(a: Wire, b: Wire) { return this.binaryOp(a, b, (x, y) => !(x || y)) }
     xor(a: Wire, b: Wire) { return this.binaryOp(a, b, (x, y) => x ? (!y) : y) }
 
-    clock(interval: number = 1, initSignal: Boolean = false) {
-        const out = new Wire
-        out.setSignal(initSignal)
-
-        const ticktack = () => {
-            const sig = !out.getSignal()
-            this.schedule(() => { out.setSignal(sig); ticktack() }, interval)
-        }
-
-        ticktack()
-        return out
-    }
-
-    // SR NOR Latch: This is not working, because the simulator doesn't stabilize
+    // SR NOR Latch
+    // [TODO] Not working; simulation doesn't stabilize
     flipflop(set: Wire, reset: Wire) {
         const out = new Wire
         const nq = new Wire
@@ -168,38 +164,19 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
-    // PosEdge D Flip-Flop { Optimized }
-    dff(input: Wire, clk: Wire, state: Boolean = false) {
-        const out = new Wire
-
-        clk.posEdge(() => {
-            const sig = input.getSignal()
-            this.schedule(() => { state = sig; out.setSignal(state) }, this._dffDelay)
-        })
-
-        return out
-    }
-
-    dffs(input: Bus, clk: Wire, we: Wire = High) {
-        return input.wires.map(w => this.dff(w, this.and(we, clk)))
-    }
-
-    register(ins: Bus, clk: Wire, we: Wire = High) {
-        return new Bus(this.dffs(ins, this.and(we, clk)))
-    }
-
-    bus(size: number) {
-        return new Bus(Array(size).fill(0).map(_ => new Wire))
-    }
-
+    // [TODO] Not sure about a posedge here...
     buffer(ins: Bus, we: Wire = High, outs: Bus = this.bus(ins.length)) {
-        we.posEdge(() => {
+        we.posEdge(() => {  
             const sig = ins.getSignal()
             this.schedule(() => outs.setSignal(sig), this._gateDelay)
         })
 
         return outs
     }
+
+    // ----------------------------------------------
+    // Sequential Logic (Arithmetic)
+    // ----------------------------------------------
 
     incrementer(a: Bus, outs = this.bus(a.length)): [Bus, Wire] {
         const cout = a.reduce((cin, w, ix) => {
@@ -218,5 +195,42 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         }, carry)
 
         return [outs, cout]
+    }
+
+    // ----------------------------------------------
+    // Sequential Logic
+    // ----------------------------------------------
+
+    clock(interval: number = 1, initSignal: Boolean = false) {
+        const out = new Wire
+        out.setSignal(initSignal)
+
+        const ticktack = () => {
+            const sig = !out.getSignal()
+            this.schedule(() => { out.setSignal(sig); ticktack() }, interval)
+        }
+
+        ticktack()
+        return out
+    }
+
+    // PosEdge D Flip-Flop { Optimized, Workaround flipflop non-stabilization }
+    dff(input: Wire, clk: Wire, state: Boolean = false) {
+        const out = new Wire
+
+        clk.posEdge(() => {
+            const sig = input.getSignal()
+            this.schedule(() => { state = sig; out.setSignal(state) }, this._dffDelay)
+        })
+
+        return out
+    }
+
+    dffs(input: Bus, clk: Wire, we: Wire = High) {
+        return input.wires.map(w => this.dff(w, this.and(we, clk)))
+    }
+
+    register(ins: Bus, clk: Wire, we: Wire = High) {
+        return new Bus(this.dffs(ins, this.and(we, clk)))
     }
 }
