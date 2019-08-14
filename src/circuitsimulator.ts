@@ -215,22 +215,29 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // PosEdge D Flip-Flop { Optimized, Workaround flipflop non-stabilization }
-    dff(input: Wire, clk: Wire, state: Boolean = false) {
+    dff(input: Wire, clk: Wire, initState: Boolean = false, reset: Wire = Low) {
         const out = new Wire
+        let state = initState
 
         clk.posEdge(() => {
             const sig = input.getSignal()
             this.schedule(() => { state = sig; out.setSignal(state) }, this._dffDelay)
         })
 
+        reset.posEdge(() => {
+            this.schedule(() => { state = initState; out.setSignal(state) }, this._dffDelay)
+        })
+
         return out
     }
 
-    dffs(input: Bus, clk: Wire, we: Wire = High) {
-        return input.wires.map(w => this.dff(w, this.and(we, clk)))
+    register(ins: Bus, clk: Wire, we: Wire = High, reset: Wire = Low) {
+        return new Bus(ins.wires.map(w => this.dff(w, this.and(we, clk), false, reset)))
     }
 
-    register(ins: Bus, clk: Wire, we: Wire = High) {
-        return new Bus(this.dffs(ins, this.and(we, clk)))
+    counter(ins: Bus, clk: Wire, reset: Wire): [Bus, Wire] {
+        const [out, overflow] = this.incrementer(this.register(ins, clk, High, reset))
+        this.connect(out, ins)
+        return [out, overflow]
     }
 }
