@@ -4,7 +4,7 @@ import { Simulator } from './simulator'
 
 const fromBin = (n: number, width: number): Boolean[] => Array(width).fill(0).map((_, ix) => (n >> ix & 1) === 1)
 
-const toDec = (bs: Boolean[] | Bus | Wire): number => {
+export const toDec = (bs: Boolean[] | Bus | Wire): number => {
     if (bs instanceof Bus) bs = bs.getSignal()
     if (bs instanceof Wire) return (bs.getSignal() ? 1 : 0)
     return bs.reduce((a, b, p) => a + ((b ? 1 : 0) << p), 0)
@@ -201,16 +201,16 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return outs
     }
 
-    counter(ins: Bus, clk: Wire) {
-        const outs = this.bus(ins.length)
+    incrementer(a: Bus, outs = this.bus(a.length)): [Bus, Wire] {
+        const cout = a.reduce((cin, w, ix) => {
+            this.connect(this.xor(w, cin), outs[ix])
+            return this.and(w, cin)
+        }, High)
 
-        clk.posEdge(() => {
-
-        })
+        return [outs, cout]
     }
 
-    fulladder(a: Bus, b: Bus, carry: Wire) {
-        const outs = this.bus(a.length)
+    fulladder(a: Bus, b: Bus, carry: Wire, outs = this.bus(a.length)): [Bus, Wire] {
         const cout = a.reduce((cin, w, ix) => {
             const x = this.xor(w, b[ix])
             this.connect(this.xor(x, cin), outs[ix])
