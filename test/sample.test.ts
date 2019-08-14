@@ -1,8 +1,9 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire } from '../src/circuitsimulator'
+import * as fc from 'fast-check'
+import { CircuitSimulator } from '../src/circuitsimulator'
 
-describe('clock', function () {
-    it('starts with initial value', function () {
+describe('clock', () => {
+    it('starts with initial value', () => {
         const s = new CircuitSimulator()
         const clk = s.clock(3, true)
 
@@ -10,23 +11,23 @@ describe('clock', function () {
         expect(clk.getSignal()).true
     })
 
-    it('posedge', function () {
-        const s = new CircuitSimulator()
-        const clk = s.clock(3, true)
+    it('posedge', () => {
+        fc.assert(fc.property(fc.integer(1, 16), (f) => {
+            const s = new CircuitSimulator()
+            const clk = s.clock(f, false)
 
-        s.posedge(clk)
-        expect(s.tick).eq(6)
-        s.posedge(clk)
-        expect(s.tick).eq(12)
+            expect(s.posedge(clk)).eq(f)
+            expect(s.posedge(clk)).eq(f * 3)
+        }))
     })
 
-    it('negedge', function () {
-        const s = new CircuitSimulator()
-        const clk = s.clock(3, true)
+    it('negedge', () => {
+        fc.assert(fc.property(fc.integer(1, 16), (f) => {
+            const s = new CircuitSimulator()
+            const clk = s.clock(f, false)
 
-        s.negedge(clk)
-        expect(s.tick).eq(3)
-        s.negedge(clk)
-        expect(s.tick).eq(9)
+            expect(s.negedge(clk)).eq(f * 2)
+            expect(s.negedge(clk)).eq(f * 4)
+        }))
     })
 })

@@ -221,7 +221,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
 
         clk.posEdge(() => {
             const sig = input.getSignal()
-            this.schedule(() => { state = sig; out.setSignal(state) }, this._dffDelay)
+            const rst = reset.getSignal()
+            this.schedule(() => { state = rst ? initState : sig; out.setSignal(state) }, this._dffDelay)
         })
 
         reset.posEdge(() => {
@@ -235,9 +236,10 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return new Bus(ins.wires.map(w => this.dff(w, this.and(we, clk), false, reset)))
     }
 
-    counter(ins: Bus, clk: Wire, reset: Wire): [Bus, Wire] {
-        const [out, overflow] = this.incrementer(this.register(ins, clk, High, reset))
-        this.connect(out, ins)
-        return [out, overflow]
+    counter(data: Bus, clk: Wire, we: Wire = Low, reset: Wire): Bus {
+        const innerData = this.buffer(data, we)
+        const out = this.register(innerData, clk, High, reset)
+        this.incrementer(out, innerData)
+        return out
     }
 }
