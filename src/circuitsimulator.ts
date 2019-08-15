@@ -152,7 +152,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const action = () => {
             if (we.getSignal()) {
                 const sig = ins.getSignal()
-                this.schedule(() => { outs.setSignal(sig) }, this._gateDelay)
+                this.schedule(() => outs.setSignal(sig), this._gateDelay)
             }
         }
 
@@ -163,7 +163,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // ----------------------------------------------
-    // Latches
+    // Memory
     // ----------------------------------------------
 
     // SR NOR Latch
@@ -192,6 +192,10 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         reset.trigger(action)
 
         return out
+    }
+
+    rom(address: Bus, mem: number[], data: Bus) {
+        address.trigger(() => data.setSignal(mem[toDec(address.getSignal())]))
     }
 
     // ----------------------------------------------
@@ -296,5 +300,17 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const out = this.register(innerData, clk, High, reset)
         this.incrementer(out, innerData)
         return out
+    }
+
+    ram(address: Bus, clk: Wire, we: Wire, oe: Wire, data: Bus): Bus {
+        const mem = Array(2 ** address.length).fill(0)
+        clk.posEdge(() => {
+            if (oe.getSignal()) {
+                data.setSignal(mem[toDec(address.getSignal())])
+            } else if (we.getSignal()) {
+                mem[toDec(address.getSignal())] = toDec(data.getSignal())
+            }
+        })
+        return data
     }
 }

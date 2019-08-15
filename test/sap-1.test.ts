@@ -7,13 +7,12 @@ describe('SAP-1 Computer', () => {
         const s = new SAP1()
 
         const CLK = s.clock(1)
-        const INC = new Wire(true)
         const RESET = new Wire
-        const PC_IN = new Wire
         const BUS = s.bus(8)
 
-        const PC = s.programCounter(BUS, INC, PC_IN, CLK, RESET)
+        const [PC, INC, PC_IN, _] = s.programCounter(BUS, CLK, RESET)
 
+        INC.on()
         s.do()
         expect(toDec(PC)).eq(0)
 
