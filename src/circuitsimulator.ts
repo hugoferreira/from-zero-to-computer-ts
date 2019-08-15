@@ -26,7 +26,7 @@ interface Connector<T> {
     length: number
     getSignal(): T
     setSignal(s: T): void
-    trigger(a: CircuitAction): number
+    trigger(a: CircuitAction): void
     clone(): Connector<T> 
 }
 
@@ -52,8 +52,8 @@ export class Wire implements Connector<boolean> {
     on() { this.setSignal(true) }
     off() { this.setSignal(false) }
 
-    trigger(a: CircuitAction) { const ref = this._actions.push(a); a(); return ref }
-    posEdge(a: CircuitAction) { const ref = this._posEdge.push(a); if (this._signal) a(); return ref }
+    trigger(a: CircuitAction) { this._actions.push(a); a() }
+    posEdge(a: CircuitAction) { this._posEdge.push(a); if (this._signal) a() }
 }
 
 export const High = new class extends Wire {
@@ -69,7 +69,10 @@ export const Low = new class extends Wire {
 }
 
 export class Bus extends Array<Wire> implements Connector<boolean[]> {
-    constructor(public wires: Wire[]) { super(...wires) }
+    constructor(public wires: Wire[]) { 
+        super() 
+        wires.forEach(w => this.push(w))
+    }
 
     clone(): Bus { return new Bus(this.wires.map(w => w.clone())) }
 
@@ -79,7 +82,7 @@ export class Bus extends Array<Wire> implements Connector<boolean[]> {
         signals.forEach((s, ix) => this.wires[ix].setSignal(s))
     }
 
-    trigger(a: CircuitAction): number { this.wires.forEach(w => w.trigger(a)); return 0 }
+    trigger(a: CircuitAction) { this.wires.forEach(w => w.trigger(a)) }
 }
 
 export class CircuitSimulator extends Simulator<CircuitAction> {
@@ -147,13 +150,14 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // [TODO] Not sure about a posedge here...
     buffer<T, U extends Connector<T>>(ins: U, we: Wire = High, outs = <U> ins.clone()) {
         const action = () => {
-            const sig = ins.getSignal()
-            const wes = we.getSignal()
-            this.schedule(() => { if (wes) outs.setSignal(sig) }, this._gateDelay)
+            if (we.getSignal()) {
+                const sig = ins.getSignal()
+                this.schedule(() => { outs.setSignal(sig) }, this._gateDelay)
+            }
         }
 
         ins.trigger(action)
-        we.trigger(action)
+        we.posEdge(action)
 
         return outs
     }

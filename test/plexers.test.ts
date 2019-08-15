@@ -4,9 +4,9 @@ import * as fc from 'fast-check'
 
 describe('decoder', () => {
     it('select correct line', () => {
-        const testCase = fc.integer(1, 10).chain((bits) => fc.tuple(
+        const testCase = fc.integer(1, 8).chain((bits) => fc.tuple(
             fc.nat(2 ** bits - 1),  // a random value between 0 and (2^bits)-1
-            fc.constant(bits)               // the number of bits to decode
+            fc.constant(bits)       // the number of bits to decode
         ))
 
         fc.assert(fc.property(testCase, ([v, bits]) => {
