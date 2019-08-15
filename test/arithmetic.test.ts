@@ -5,8 +5,8 @@ import * as fc from 'fast-check'
 describe('fulladder', () => {
     it('sums n-bit values and sets carry', () => {
         const testCase = fc.integer(2, 16).chain(bits => fc.tuple(
-            fc.nat(Math.pow(2, bits) - 1),  // a
-            fc.nat(Math.pow(2, bits) - 1),  // b
+            fc.nat(2 ** bits - 1),  // a
+            fc.nat(2 ** bits - 1),  // b
             fc.constant(bits),              // bits
             fc.nat(1)                       // carry                       
         ))
@@ -21,8 +21,8 @@ describe('fulladder', () => {
             b.setSignal(y)
             s.do()
 
-            expect(toDec(sum)).eq((x + y + c) % Math.pow(2, bits))
-            expect(carry.getSignal()).eq(x + y + c > (Math.pow(2, bits) - 1))
+            expect(toDec(sum)).eq((x + y + c) % (2 ** bits))
+            expect(carry.getSignal()).eq(x + y + c > (2 ** bits - 1))
         }))
     })
 })
