@@ -1,6 +1,7 @@
 export class Simulator<Action extends () => void> {
     tick = 0
     agenda = Array<[number, Action]>() 
+    statistics = { totalItems: 0 }
 
     step() {
         this.tick += 1
@@ -19,6 +20,7 @@ export class Simulator<Action extends () => void> {
     }
 
     schedule(item: Action, delay: number = 0) {
+        this.statistics.totalItems += 1
         this.agenda.push([this.tick + delay, item]) 
     }
         

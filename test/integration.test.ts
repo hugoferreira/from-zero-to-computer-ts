@@ -54,5 +54,7 @@ describe('bus, registers and adder', () => {
         expect(toDec(B_DATA)).eq(0x09) 
         expect(toDec(SUM_DATA)).eq(0x16) 
         expect(CF_OUT.getSignal()).false
+
+        console.log(`Processed a total of ${s.statistics.totalItems} scheduled items.`)
     })
 })
