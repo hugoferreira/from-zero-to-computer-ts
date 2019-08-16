@@ -69,10 +69,7 @@ export const Low = new class extends Wire {
 }
 
 export class Bus extends Array<Wire> implements Connector<boolean[]> {
-    constructor(public wires: Wire[]) { 
-        super() 
-        wires.forEach(w => this.push(w))
-    }
+    constructor(public wires: Wire[]) { super(...wires) }
 
     clone(): Bus { return new Bus(this.wires.map(w => w.clone())) }
 
@@ -83,6 +80,10 @@ export class Bus extends Array<Wire> implements Connector<boolean[]> {
     }
 
     trigger(a: CircuitAction) { this.wires.forEach(w => w.trigger(a)) }
+
+    slice(start?: number | undefined, end?: number | undefined): Wire[] { 
+        return this.wires.slice(start, end) 
+    }
 }
 
 export class CircuitSimulator extends Simulator<CircuitAction> {
@@ -295,15 +296,18 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return new Bus(ins.wires.map(w => this.dff(w, this.and(we, clk), false, reset)))
     }
 
-    counter(data: Bus, clk: Wire, we: Wire = Low, reset: Wire): Bus {
+    counter(data: Bus, clk: Wire, we: Wire = Low, reset: Wire, out: Bus = data.clone()): Bus {
         const innerData = this.buffer(data, we)
-        const out = this.register(innerData, clk, High, reset)
-        this.incrementer(out, innerData)
+        const r_out = this.register(innerData, clk, High, reset)
+        this.incrementer(r_out, innerData)
+        this.connect(r_out, out)
         return out
     }
 
-    ram(address: Bus, clk: Wire, we: Wire, oe: Wire, data: Bus): Bus {
+    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), baseAddr = 0, contents: number[] = [], we: Wire = new Wire, oe: Wire = new Wire): [Bus, Wire, Wire] {
         const mem = Array(2 ** address.length).fill(0)
+        contents.forEach((v, ix) => mem[ix + baseAddr] = v)
+
         clk.posEdge(() => {
             if (oe.getSignal()) {
                 data.setSignal(mem[toDec(address.getSignal())])
@@ -311,6 +315,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
                 mem[toDec(address.getSignal())] = toDec(data.getSignal())
             }
         })
-        return data
+
+        return [data, we, oe]
     }
 }

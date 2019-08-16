@@ -1,100 +1,126 @@
-import { CircuitSimulator, Wire, toHex as th, toBin as tb } from './circuitsimulator'
+import { Wire, toHex as th, toBin as tb } from './circuitsimulator'
+import { SAP1 } from './sap-1'
 
-// Quokka is stupid...
 const toHex = th
 const toBin = tb
 
-// Let the fun begin
-const s = new CircuitSimulator()
+const microcode = [
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x8210, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x2210, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x9000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x6000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x0050, 0x4220, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x0050, 0x1220, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x0050, 0x8210, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x0050, 0x2210, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x8004, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x8008, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x800C, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x00C0, 0x0A10, 0x00C0, 0x0110, 0x0000, 0x0000, 0x0000, 0x0000]
 
-/* const A = s.bus(4)
-const B = s.bus(4)
+const program = [0x01, 0x03, 0x02, 0x02, 0x10, 0x08, 0x1C, 0x1F, 0x02]
 
-const [SUM_DATA, CF_OUT] = s.fulladder(A, B, High)
+const s = new SAP1()
+const CLK = s.clock(1, false)
+const RESET = new Wire
 
-s.forward()
-SUM_DATA.getSignal() //? toBin($)
-CF_OUT.getSignal() //? 
-*/
+const { DBUS,
+    A_DATA,
+    B_DATA,
+    IR_DATA,
+    MAR_DATA,
+    PC_DATA,
+    ALU_DATA,
+    RAM_DATA,
+    OPCODE,
+    STEP,
+    CTRL } = s.build(CLK, RESET, microcode, 0, program)
 
-const CLK = s.clock(10)
-const DBUS = s.bus(8)
+s.do()
+STEP        //? toBin($)
+OPCODE      //? toBin($)
+CTRL        //? toBin($)
+MAR_DATA    //? toHex($)
+DBUS        //? toHex($)
+IR_DATA     //? toHex($)
+PC_DATA     //? toHex($)
 
-const A_IN = new Wire(false)
-const B_IN = new Wire(false)
-const A_DATA = s.register(DBUS, CLK, A_IN)
-const B_DATA = s.register(DBUS, CLK, B_IN)
+s.posedge(CLK)
+STEP        //? toBin($)
+OPCODE      //? toBin($)
+CTRL        //? toBin($)
+MAR_DATA    //? toHex($)
+DBUS        //? toHex($)
+IR_DATA     //? toHex($)
+PC_DATA     //? toHex($)
 
-const A_OUT = new Wire(false)
-const B_OUT = new Wire(false)
-s.buffer(A_DATA, A_OUT, DBUS)
-s.buffer(B_DATA, B_OUT, DBUS)
+s.posedge(CLK)
+STEP        //? toBin($)
+OPCODE      //? toBin($)
+CTRL        //? toBin($)
+MAR_DATA    //? toHex($)
+DBUS        //? toHex($)
+IR_DATA     //? toBin($)
+PC_DATA     //? toHex($)
 
-const CF_IN = new Wire
-const [SUM_DATA, CF_OUT] = s.fulladder(A_DATA, B_DATA, CF_IN)
+s.posedge(CLK)
+STEP        //? toBin($)
+OPCODE      //? toBin($)
+CTRL        //? toBin($)
+A_DATA      //? toHex($)
+DBUS        //? toHex($)
+IR_DATA     //? toHex($)
+PC_DATA     //? toHex($)
 
-s.posedge(CLK)  //?
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
+A_DATA      //? toHex($)
+DBUS        //? toHex($)
+IR_DATA     //? toHex($)
+PC_DATA     //? toHex($)
 
-DBUS.setSignal(0b1001)
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-s.posedge(CLK)  //?
-A_DATA          //? toBin($)
-B_DATA          //? toBin($)
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-B_IN.on()
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-s.posedge(CLK)  //?
-A_DATA          //? toBin($)
-B_DATA          //? toBin($)
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-DBUS.setSignal(0x0000)
-B_OUT.on()      // override data on DBUS
-B_IN.off()
-A_IN.on()
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-s.posedge(CLK)  //?
-A_DATA          //? toBin($)
-B_DATA          //? toBin($)
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
 
-B_OUT.off()
-DBUS[2].on()    // Slice and set wire
-B_IN            //? toBin($)
-A_IN            //? toBin($)
-
-s.posedge(CLK)  //?
-A_DATA          //? toHex($)
-B_DATA          //? toHex($)
-SUM_DATA        //? toHex($)
-CF_OUT          //? toBin($)
-
-
-
-/*
-/*const inv = s.inverter(clk)
-const in2 = s.inverter(inv)
-const and = s.and(clk, in2)
-const or  = s.or(clk, inv)
-const set   = new Wire(false)
-const reset = new Wire(false)
-
-clk.getSignal() === false //?
-in2.getSignal() === false //?
-and.getSignal() === false//?
-or.getSignal() === false //?
-s.forward() === 5//?
-clk.getSignal() === true //?
-in2.getSignal() === false //?
-and.getSignal() === false //?
-or.getSignal()  === true //?
-s.forward() === 10 //?
-clk.getSignal() === false  //?
-in2.getSignal() === false  //?
-and.getSignal() === false  //?
-or.getSignal() === true //?
-s.forward() === 15 //?
-clk.getSignal() === true //?
-in2.getSignal() === true //?
-and.getSignal() === true //?
-or.getSignal() === true //?
-
-*/

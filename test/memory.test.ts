@@ -11,7 +11,7 @@ describe('ram', () => {
         const RAM_IN = new Wire
         const RAM_OUT = new Wire
 
-        s.ram(abus, CLK, RAM_IN, RAM_OUT, dbus)
+        s.ram(abus, CLK, dbus, 0, [], RAM_IN, RAM_OUT)
 
         abus.setSignal(0x00)
         s.posedge(CLK)
