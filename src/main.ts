@@ -56,71 +56,19 @@ const { DBUS,
     STEP,
     CTRL } = s.build(CLK, RESET, microcode, 0, program)
 
-s.do()
-STEP        //? toBin($)
-OPCODE      //? toBin($)
-CTRL        //? toBin($)
-MAR_DATA    //? toHex($)
-DBUS        //? toHex($)
-IR_DATA     //? toHex($)
-PC_DATA     //? toHex($)
+let t = 8 * 4 + 0
+while(t--) s.posedge(CLK)
 
-s.posedge(CLK)
 STEP        //? toBin($)
 OPCODE      //? toBin($)
 CTRL        //? toBin($)
-MAR_DATA    //? toHex($)
 DBUS        //? toHex($)
-IR_DATA     //? toHex($)
-PC_DATA     //? toHex($)
-
-s.posedge(CLK)
-STEP        //? toBin($)
-OPCODE      //? toBin($)
-CTRL        //? toBin($)
-MAR_DATA    //? toHex($)
-DBUS        //? toHex($)
+A_DATA      //? toHex($)
+B_DATA      //? toHex($)
 IR_DATA     //? toBin($)
+MAR_DATA    //? toHex($)
 PC_DATA     //? toHex($)
+ALU_DATA    //? toHex($)
+RAM_DATA    //? toHex($)
 
-s.posedge(CLK)
-STEP        //? toBin($)
-OPCODE      //? toBin($)
-CTRL        //? toBin($)
-A_DATA      //? toHex($)
-DBUS        //? toHex($)
-IR_DATA     //? toHex($)
-PC_DATA     //? toHex($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-A_DATA      //? toHex($)
-DBUS        //? toHex($)
-IR_DATA     //? toHex($)
-PC_DATA     //? toHex($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
-
-s.posedge(CLK)
-STEP        //? toHex($)
-CTRL        //? toBin($)
 

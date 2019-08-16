@@ -169,14 +169,13 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
 
     // SR NOR Latch
     // [TODO] Not working; simulation doesn't stabilize
-    flipflop(set: Wire, reset: Wire) {
-        const out = new Wire
+    flipflop(set: Wire = new Wire, reset: Wire = new Wire, out = new Wire) {
         const nq = new Wire
 
-        this.connect(this.nor(set, nq), out, 1)
-        this.connect(this.nor(reset, out), nq, 1)
+        this.connect(this.nor(set, nq), nq, 1)
+        this.connect(this.nor(reset, out), out, 1)
 
-        return out
+        return [out, set, reset]
     }
 
     // SR Latch { Optimized }
