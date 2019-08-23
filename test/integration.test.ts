@@ -8,13 +8,13 @@ describe('bus, registers and adder', () => {
         const CLK = s.clock(10)
         const DBUS = s.bus(8)
 
-        const A_IN = new Wire(false)
-        const B_IN = new Wire(false)
+        const A_IN = new Wire
+        const B_IN = new Wire
         const A_DATA = s.register(DBUS, CLK, A_IN)
         const B_DATA = s.register(DBUS, CLK, B_IN)
 
-        const A_OUT = new Wire(false)
-        const B_OUT = new Wire(false)
+        const A_OUT = new Wire
+        const B_OUT = new Wire
         s.buffer(A_DATA, A_OUT, DBUS)
         s.buffer(B_DATA, B_OUT, DBUS)
 
@@ -35,12 +35,13 @@ describe('bus, registers and adder', () => {
         expect(toDec(A_DATA)).eq(0)         
         expect(toDec(B_DATA)).eq(0b1001)    
 
-        DBUS.setSignal(0x0000)
-        B_OUT.on()      // override data on DBUS
         B_IN.off()
+        DBUS.setSignal(0x0000)
         A_IN.on()
+        B_OUT.on()      // override data on DBUS
 
         expect(s.posedge(CLK)).eq(70)
+        expect(toDec(DBUS)).eq(0b1001) 
         expect(toDec(A_DATA)).eq(0b1001) 
         expect(toDec(B_DATA)).eq(0b1001) 
 

@@ -17,18 +17,18 @@ describe('SAP-1 Computer', () => {
             CTRL        // Control Lines
         } = computer
 
-        for(let i = 0; i < 16*8; i+=1) {
+        for(let i = 0; i < 16; i+=1) {
             const step = toDec(STEP)
             console.log(`Executing ${step}`)
             
-            if (step === 1) CTRL.setSignal(CTL.PC_INC)
+            if (step === 0) CTRL.setSignal(CTL.PC_INC)
             else CTRL.setSignal(0x0)
 
             console.log(`Executing ${toBin(CTRL)}`)
             
-            expect(toDec(STEP)).eq(i % 8)
+            expect(toDec(STEP)).eq(0)
             expect(toDec(DBUS)).eq(0)
-            expect(toDec(PC_DATA)).eq(Math.floor(i / 8) + ((step > 1) ? 1 : 0))
+            expect(toDec(PC_DATA)).eq(i)
             s.posedge(CLK)
         }
     })
@@ -118,12 +118,14 @@ describe('SAP-1 Computer', () => {
         expect(toDec(PC)).eq(0xA0)
 
         PC_INC.on()
+        expect(toDec(PC)).eq(0xA0)
+        s.posedge(clk)
+        expect(toDec(PC)).eq(0xA1)
         s.posedge(clk)
         s.posedge(clk)
         s.posedge(clk)
         s.posedge(clk)
-        s.posedge(clk)
-        expect(toDec(PC)).eq(0xA6)
+        expect(toDec(PC)).eq(0xA5)
         expect(toDec(BUS)).eq(0xA0)
         
         PC_OUT.on()

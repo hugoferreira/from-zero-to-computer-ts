@@ -137,11 +137,11 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // Gates
     // ----------------------------------------------
 
-    inverter(input: Wire) {
+    inverter(input: Wire, delay = 0) {
         const out = new Wire
         input.trigger(() => {
             const sig = !input.getSignal()
-            this.schedule(() => out.setSignal(sig), this._gateDelay)
+            this.schedule(() => out.setSignal(sig), this._gateDelay + delay)
         })
         return out
     }
@@ -183,7 +183,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     // SR NOR Latch
-    flipflop(set: Wire = new Wire(false), reset: Wire = new Wire(false), q = new Wire(false)) {
+    flipflop(set: Wire = new Wire, reset: Wire = new Wire, q = new Wire) {
         const nq = new Wire(true)
 
         this.nor(reset, nq, q)
@@ -291,7 +291,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     register(ins: Bus, clk: Wire, we: Wire = High, reset: Wire = Low) {
-        return new Bus(ins.wires.map(w => this.dff(w, this.and(we, clk), false, reset)))
+        return new Bus(this.buffer(ins, we).wires.map(w => this.dff(w, clk, false, reset)))
+        // return new Bus(ins.wires.map(w => this.dff(w, this.and(clk, we), false, reset)))
     }
 
     counter(data: Bus, clk: Wire, we: Wire = Low, reset: Wire, out: Bus = data.clone()): Bus {

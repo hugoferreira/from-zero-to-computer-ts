@@ -16,9 +16,40 @@ export enum CTL {
     ALU_OUT = 0b0000000000001000
 }
 
-export class SAP1 extends CircuitSimulator {    
-    fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
+type Opcode = number
+type CtlLines = number[]
 
+export const microcodeTable: [Opcode, CtlLines][] = [
+    [0b00001, [CTL.PC_OUT | CTL.MAR_IN, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    [0b00010, [CTL.PC_OUT | CTL.MAR_IN, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    [0b00100, [0x9000]],
+    [0b00101, [0x6000]],
+    [0b01000, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x4220]],
+    [0b01001, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x1220]],
+    [0b01010, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x8210]],
+    [0b01011, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x2210]],
+    [0b10000, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
+    [0b10001, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
+    [0b10010, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
+    [0b11111, [CTL.PC_OUT | CTL.MAR_IN, 0x0110]]
+]
+
+export function buildMicrocode(table: [Opcode, CtlLines][]) {
+    const steps = 8
+    const microcode = Array(0b100000 * steps).fill(0)
+    const fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
+
+    for (let op = 0b00000; op <= 0b11111; op += 1) {
+        microcode[op * steps + 0] = fetchSteps[0]
+        microcode[op * steps + 1] = fetchSteps[1]
+    }
+
+    table.forEach(([op, ctllines]) => ctllines.forEach((microop, ix) => microcode[op * steps + 2 + ix] = microop))
+
+    return microcode
+}
+
+export class SAP1 extends CircuitSimulator {    
     build(clk: Wire, reset: Wire, microcode: number[], mem: number[] = Array(256).fill(0)) {
         const nclk = this.inverter(clk)
         const DBUS = this.bus(8)
@@ -27,7 +58,7 @@ export class SAP1 extends CircuitSimulator {
         const { out: B_DATA, we: B_IN, oe: B_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: IR_DATA, we: IR_IN, oe: IR_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: MAR_DATA, we: MAR_IN } = this.busRegister({ bus: DBUS, clk, reset })
-        const { out: PC_DATA, inc: PC_INC, we: PC_IN, oe: PC_OUT } = this.programCounter({ data: DBUS, clk: nclk, reset })
+        const { out: PC_DATA, inc: PC_INC, we: PC_IN, oe: PC_OUT } = this.programCounter({ data: DBUS, clk: clk, reset })
         const { sum: ALU_DATA, oe: ALU_OUT } = this.alu({ a: A_DATA, b: B_DATA, bus: DBUS })
         const { out: RAM_DATA, we: RAM_IN, oe: RAM_OUT } = this.ioram(MAR_DATA, nclk, DBUS, mem)
 
@@ -35,7 +66,7 @@ export class SAP1 extends CircuitSimulator {
         const CTRL = new Bus([A_IN, A_OUT, B_IN, B_OUT, IR_IN, IR_OUT, PC_INC, PC_IN, PC_OUT, 
                               MAR_IN, RAM_IN, RAM_OUT, ALU_OUT, Low, Low, Low].reverse())
 
-        const STEP = this.controlunit(OPCODE, nclk, reset, microcode, CTRL, true)
+        const STEP = this.controlunit(OPCODE, clk, reset, microcode, CTRL, true)
         
         return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OPCODE, STEP, CTRL }
     }
@@ -50,7 +81,7 @@ export class SAP1 extends CircuitSimulator {
     } 
 
     controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: number[], ctrl: Bus, resetOnZero = false): Bus {
-        const nop = new Wire(false)
+        const nop = new Wire
         const step = this.counter(this.bus(3), clk, High, this.or(reset, nop))
         const ctrlin = new Bus(step.wires.concat(opcode))
 
@@ -72,7 +103,7 @@ export class SAP1 extends CircuitSimulator {
         return { out, inc, we, oe }
     }
     
-    busRegister({ bus, clk, reset = new Wire(false), we = new Wire, oe = new Wire }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
+    busRegister({ bus, clk, reset = new Wire, we = new Wire, oe = new Wire }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
         const out = this.register(bus, clk, we, reset)
         this.buffer(out, oe, bus)
         return { out, we, oe }

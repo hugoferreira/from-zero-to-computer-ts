@@ -30,6 +30,7 @@ describe('bus and registers', () => {
             let currentValues = initValues
 
             swaps.forEach(([we, oe]) => {
+                bus.setSignal(0x00)
                 regs[we].we.on()
                 regs[oe].oe.on()
                 s.posedge(clk)
