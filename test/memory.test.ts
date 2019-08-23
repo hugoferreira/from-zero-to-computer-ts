@@ -8,10 +8,8 @@ describe('ram', () => {
         const CLK = s.clock(1)
         const abus = s.bus(8)
         const dbus = s.bus(8)
-        const RAM_IN = new Wire
-        const RAM_OUT = new Wire
 
-        s.ram(abus, CLK, dbus, 0, [], RAM_IN, RAM_OUT)
+        const { we: RAM_IN, oe: RAM_OUT } = s.ioram(abus, CLK, dbus, Array(0x100).fill(0))
 
         abus.setSignal(0x00)
         s.posedge(CLK)

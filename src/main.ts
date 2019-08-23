@@ -1,5 +1,6 @@
-import { Wire, toHex as th, toBin as tb } from './circuitsimulator'
+import { Wire, toHex as th, toBin as tb, toDec } from './circuitsimulator'
 import { SAP1 } from './sap-1'
+import { dumpRAM, dumpRegisters } from './repl'
 
 const toHex = th
 const toBin = tb
@@ -39,36 +40,89 @@ const microcode = [
     0x00C0, 0x0A10, 0x00C0, 0x0110, 0x0000, 0x0000, 0x0000, 0x0000]
 
 const program = [0x01, 0x03, 0x02, 0x02, 0x10, 0x08, 0x1C, 0x1F, 0x02]
+// const program = [0x01, 0x03]
 
 const s = new SAP1()
 const CLK = s.clock(1, false)
 const RESET = new Wire
+const ram = Array<number>(256).fill(0)
 
-const { DBUS,
-    A_DATA,
-    B_DATA,
-    IR_DATA,
-    MAR_DATA,
-    PC_DATA,
-    ALU_DATA,
-    RAM_DATA,
-    OPCODE,
-    STEP,
-    CTRL } = s.build(CLK, RESET, microcode, 0, program)
+const computer = s.build(CLK, RESET, microcode, ram)
+const {
+    DBUS,       // Data Bus
+    A_DATA,     // Register A
+    B_DATA,     // Register B
+    IR_DATA,    // Instruction Register
+    MAR_DATA,   // Memory Address Register
+    PC_DATA,    // Program Counter
+    ALU_DATA,   // Arithmetic Logic Unit Output
+    RAM_DATA,   // RAM Output
+    OPCODE,     // Current Opcode (from IR)
+    STEP,       // Microcode Step
+    CTRL        // Control Lines
+} = computer
 
-let t = 8 * 4 + 0
-while(t--) s.posedge(CLK)
+s.load(ram, program)
+s.do()
 
-STEP        //? toBin($)
-OPCODE      //? toBin($)
-CTRL        //? toBin($)
+/*
+
+STEP        //? toHex($)
 DBUS        //? toHex($)
-A_DATA      //? toHex($)
-B_DATA      //? toHex($)
-IR_DATA     //? toBin($)
 MAR_DATA    //? toHex($)
 PC_DATA     //? toHex($)
-ALU_DATA    //? toHex($)
+CTRL        //? toBin($)
+
+s.posedge(CLK)
+STEP        //? toHex($)
+DBUS        //? toHex($)
+MAR_DATA    //? toHex($)
+PC_DATA     //? toHex($)
+CTRL        //? toBin($)
+
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
+A_DATA      //? toHex($)
+DBUS        //? toHex($)
+PC_DATA     //? toHex($)
+IR_DATA     //? toHex($)
+MAR_DATA    //? toHex($)
+
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
+A_DATA      //? toHex($)
+DBUS        //? toHex($)
+PC_DATA     //? toHex($)
+MAR_DATA    //? toHex($)
+
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
+DBUS        //? toHex($)
+PC_DATA     //? toHex($)
+MAR_DATA    //? toHex($)
 RAM_DATA    //? toHex($)
 
+s.posedge(CLK)
+STEP        //? toHex($)
+CTRL        //? toBin($)
+A_DATA      //? toHex($)
+DBUS        //? toHex($)
+PC_DATA     //? toHex($)
+IR_DATA     //? toHex($)
+MAR_DATA    //? toHex($)
+RAM_DATA    //? toHex($)
 
+*/
+
+
+setInterval(() => {
+    s.posedge(CLK)
+
+    console.clear()
+    dumpRAM(ram, toDec(MAR_DATA))
+    console.log()
+    dumpRegisters(computer)
+}, 1000)

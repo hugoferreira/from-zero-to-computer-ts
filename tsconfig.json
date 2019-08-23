@@ -12,6 +12,7 @@
        "noImplicitReturns":false,
        "noImplicitUseStrict":false,
        "strict": true,
+       "incremental": true,
        "outDir":"build/",
        "baseUrl":"src/"
     },

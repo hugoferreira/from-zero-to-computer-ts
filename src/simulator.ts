@@ -1,7 +1,6 @@
 export class Simulator<Action extends () => void> {
     tick = 0
-    agenda = new Map<number, Action[]>() 
-    keys = Array<number>()
+    agenda = Array<[number, Action]>()
     statistics = { totalItems: 0 }
 
     step() {
@@ -10,27 +9,25 @@ export class Simulator<Action extends () => void> {
     }
 
     do() {
-        while(true) {
-            if (this.agenda.has(this.tick)) {
-                const items = this.agenda.get(this.tick)!
-                this.agenda.delete(this.tick)
-                items.forEach(item => item())
-            } else return
+        while (true) {
+            // Later change it to a SortedMap and get rid of this nonsense
+            const items = this.agenda.filter(i => i[0] === this.tick)
+            if (items.length === 0) return
+
+            this.agenda = this.agenda.filter(i => i[0] !== this.tick)
+            items.forEach(item => item[1]())
         }
     }
 
     schedule(item: Action, delay: number = 0) {
         this.statistics.totalItems += 1
-        const atTick = this.tick + delay
-        this.keys.push(atTick)
-        if (!this.agenda.has(atTick)) this.agenda.set(atTick, [item])
-        else this.agenda.get(atTick)!.push(item) 
+        this.agenda.push([this.tick + delay, item])
     }
-        
+
     forward(): number {
         if (this.hasNext()) {
-            this.tick = this.keys.sort()[0]
-            this.keys = this.keys.filter(t => t !== this.tick)
+            this.agenda.sort((a, b) => a[0] - b[0])
+            this.tick = this.agenda[0][0]
             this.do()
         }
 
@@ -38,6 +35,6 @@ export class Simulator<Action extends () => void> {
     }
 
     hasNext() {
-        return this.keys.length !== 0
+        return this.agenda.length !== 0
     }
 }

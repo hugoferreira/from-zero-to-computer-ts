@@ -148,7 +148,6 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     nor(a: Wire, b: Wire) { return this.binaryOp(a, b, (x, y) => !(x || y)) }
     xor(a: Wire, b: Wire) { return this.binaryOp(a, b, (x, y) => x ? (!y) : y) }
 
-    // [TODO] Not sure about a posedge here...
     buffer<T, U extends Connector<T>>(ins: U, we: Wire = High, outs = <U> ins.clone()) {
         const action = () => {
             if (we.getSignal()) {
@@ -158,7 +157,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         }
 
         ins.trigger(action)
-        we.posEdge(action)
+        we.trigger(action)
 
         return outs
     }
@@ -303,18 +302,25 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
-    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), baseAddr = 0, contents: number[] = [], we: Wire = new Wire, oe: Wire = new Wire): [Bus, Wire, Wire] {
-        const mem = Array(2 ** address.length).fill(0)
-        contents.forEach((v, ix) => mem[ix + baseAddr] = v)
+    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = new Wire, oe: Wire = new Wire) {
+        if (mem.length !== 2 ** address.length) throw Error("Invalid memory size for addressing range")
+        const latch = data.clone()
+        const latchAction = () => latch.setSignal(mem[toDec(address.getSignal())])
+        const writeAction = () => { if (we.getSignal()) mem[toDec(address.getSignal())] = toDec(data.getSignal()) }
 
-        clk.posEdge(() => {
-            if (oe.getSignal()) {
-                data.setSignal(mem[toDec(address.getSignal())])
-            } else if (we.getSignal()) {
-                mem[toDec(address.getSignal())] = toDec(data.getSignal())
-            }
-        })
+        address.trigger(latchAction)
+        clk.posEdge(latchAction)
+        clk.posEdge(writeAction)
+        data.trigger(writeAction)
 
-        return [data, we, oe]
+        const out = this.buffer(latch, oe)
+
+        return { out, we, oe, mem }
     }
+
+    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = new Wire, oe: Wire = new Wire) {
+        const { out } = this.ram(address, clk, data, mem, we, oe)
+        this.connect(out, data)
+        return { out, we, oe, mem }
+    } 
 }
