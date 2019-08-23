@@ -35,7 +35,7 @@ describe('SAP-1 Computer', () => {
 
     it('PC Basic', () => {
         const s = new SAP1()
-        const CLK = s.clock(1, false)
+        const CLK = s.clock(2, false)
         const RESET = new Wire
         const DBUS = s.bus(8)
 
@@ -77,7 +77,7 @@ describe('SAP-1 Computer', () => {
     it('program counter', () => {
         const s = new SAP1()
 
-        const clk = s.clock(1)
+        const clk = s.clock(3)
         const reset = new Wire
         const BUS = s.bus(8)
 

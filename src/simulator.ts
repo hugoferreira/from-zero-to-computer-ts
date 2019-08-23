@@ -26,8 +26,7 @@ export class Simulator<Action extends () => void> {
 
     forward(): number {
         if (this.hasNext()) {
-            this.agenda.sort((a, b) => a[0] - b[0])
-            this.tick = this.agenda[0][0]
+            this.tick = Math.min(... this.agenda.map(i => i[0]))
             this.do()
         }
 
