@@ -20,18 +20,16 @@ type Opcode = number
 type CtlLines = number[]
 
 export const microcodeTable: [Opcode, CtlLines][] = [
-    [0b00001, [CTL.PC_OUT | CTL.MAR_IN, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    [0b00010, [CTL.PC_OUT | CTL.MAR_IN, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    [0b00100, [0x9000]],
-    [0b00101, [0x6000]],
-    [0b01000, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x4220]],
-    [0b01001, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x1220]],
-    [0b01010, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x8210]],
-    [0b01011, [CTL.PC_OUT | CTL.MAR_IN, 0x0050, 0x2210]],
-    [0b10000, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
-    [0b10001, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
-    [0b10010, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
-    [0b11111, [CTL.PC_OUT | CTL.MAR_IN, 0x0110]]
+    /* A <- xx   */ [0b00001, [CTL.PC_OUT | CTL.MAR_IN, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    /* B <- xx   */ [0b00010, [CTL.PC_OUT | CTL.MAR_IN, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    /* A <- B    */ [0b00100, [CTL.A_IN | CTL.B_OUT]],
+    /* B <- A    */ [0b00101, [CTL.B_IN | CTL.A_OUT]],
+    /* [xx] <- A */ [0b01000, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.A_OUT | CTL.PC_INC | CTL.RAM_IN]],
+    /* [xx] <- B */ [0b01001, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.B_OUT | CTL.PC_INC | CTL.RAM_IN]],
+    /* A <- [xx] */ [0b01010, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    /* B <- [xx] */ [0b01011, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
+    /* A <- A+B  */ [0b10000, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
+    /* B <- A    */ [0b11111, [CTL.PC_OUT | CTL.MAR_IN, CTL.PC_IN | CTL.RAM_OUT]]
 ]
 
 export function buildMicrocode(table: [Opcode, CtlLines][]) {
