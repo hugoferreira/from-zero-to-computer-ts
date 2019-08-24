@@ -7,9 +7,9 @@ describe('SAP-1 Computer', () => {
         const s = new SAP1()
         const CLK = s.clock(1, false)
         const RESET = s.wire()
-        const ram = Array<number>(256).fill(0)
+        const ram = new Uint8Array(256)
 
-        const computer = s.build(CLK, RESET, Array(0x100).fill(0), ram)
+        const computer = s.build(CLK, RESET, new Uint16Array(0x100), ram)
         const {
             DBUS,
             PC_DATA,    // Program Counter
@@ -41,7 +41,7 @@ describe('SAP-1 Computer', () => {
 
         const { out: PC_DATA, inc: PC_INC } = s.programCounter({ data: DBUS, clk: CLK, reset: RESET })
         const CTRL = new Bus([s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, PC_INC, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low].reverse())
-        const STEP = s.controlunit(s.bus(5), CLK, RESET, Array(0x100).fill(0), CTRL)
+        const STEP = s.controlunit(s.bus(5), CLK, RESET, new Uint16Array(0x100), CTRL)
 
         for (let i = 0; i < 16 * 8; i += 1) {
             const step = toDec(STEP)
@@ -62,8 +62,8 @@ describe('SAP-1 Computer', () => {
         const bus = s.bus(8)
         const clk = s.clock(1, false)
         const reset = s.wire()
-        const ram = Array<number>(256).fill(0)
-        const program = [0x01, 0x03]
+        const ram = new Uint8Array(256)
+        const program = new Uint8Array([0x01, 0x03])
         
         const { out: A_DATA, we: A_IN } = s.busRegister({ bus, clk, reset })
         const { out: IR_DATA, we: IR_IN, oe: IR_OUT } = s.busRegister({ bus, clk, reset })

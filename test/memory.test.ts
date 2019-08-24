@@ -9,7 +9,7 @@ describe('ram', () => {
         const abus = s.bus(8)
         const dbus = s.bus(8)
 
-        const { we: RAM_IN, oe: RAM_OUT } = s.ioram(abus, CLK, dbus, Array(0x100).fill(0))
+        const { we: RAM_IN, oe: RAM_OUT } = s.ioram(abus, CLK, dbus, new Uint8Array(0x100))
 
         abus.set(0x00)
         s.posedge(CLK)

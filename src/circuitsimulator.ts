@@ -9,7 +9,7 @@ export const toDec = (bs: boolean | boolean[] | Bus | Wire): number => {
     return bs.reduce((a, b, p) => a + ((b ? 1 : 0) << p), 0)
 }
 
-export const fromBin = (n: number, width: number): boolean[] => Array(width).fill(0).map((_, ix) => (n >> ix & 1) === 1)
+export const fromBin = (n: number, width: number): boolean[] => Array(width).fill(false).map((_, ix) => (n >> ix & 1) === 1)
 export const toHex = (bs: boolean[] | Bus, width: number = bs.length / 4): string => `0x${toDec(bs).toString(16).padStart(width, '0')}`
 export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string => `0b${toDec(bs).toString(2).padStart(width, '0')}`
 
@@ -212,7 +212,6 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return [q, nq, set, reset]
     }
 
-
     rom(address: Bus, mem: number[], data: Bus) {
         address.onChange(() => data.set(mem[toDec(address.get())]))
     }
@@ -316,7 +315,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return r_out
     }
 
-    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = this.wire(), oe: Wire = this.wire()) {
+    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()) {
         if (mem.length !== 2 ** address.length) throw Error("Invalid memory size for addressing range")
         const latch = data.clone()
         const latchAction = () => latch.set(mem[toDec(address.get())])
@@ -332,7 +331,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return { out, we, oe, mem }
     }
 
-    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = this.wire(), oe: Wire = this.wire()) {
+    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()) {
         const { out } = this.ram(address, clk, data, mem, we, oe)
         out.connect(data)
         return { out, we, oe, mem }

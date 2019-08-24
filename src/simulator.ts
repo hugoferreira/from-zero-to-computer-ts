@@ -18,6 +18,7 @@ export abstract class Simulator<Action> {
             if (items.length === 0) return executedItems
 
             this.agenda = this.agenda.filter(i => i[0] !== this.tick)
+            
             items.forEach(item => {
                 this.execute(item[1])
                 executedItems.push(item[1])
@@ -32,6 +33,8 @@ export abstract class Simulator<Action> {
 
     forward() {
         if (this.hasNext()) {
+            // Renormalize tick values every 100000 ticks so it doesn't overflow
+            if (this.tick > 10000) this.agenda = this.agenda.map(([t, v]) => [t - 10000, v])
             this.tick = Math.min(... this.agenda.map(i => i[0]))
             return { tick: this.tick, items: this.do() }
         }

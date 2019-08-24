@@ -1,7 +1,7 @@
 import { CircuitSimulator, Wire, Bus, toDec } from './circuitsimulator'
 
 export class SAP1 extends CircuitSimulator {    
-    build(clk: Wire, reset: Wire, microcode: number[], mem: number[] = Array(256).fill(0)) {
+    build(clk: Wire, reset: Wire, microcode: Uint16Array, mem: Uint8Array = new Uint8Array(256)) {
         const nclk = this.inverter(clk)
         const DBUS = this.bus(8)
     
@@ -22,7 +22,7 @@ export class SAP1 extends CircuitSimulator {
         return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OPCODE, STEP, CTRL }
     }
 
-    load(mem: number[], program: number[]) {
+    load(mem: Uint8Array, program: Uint8Array) {
         program.forEach((v, ix) => mem[ix] = v)
     }
 
@@ -31,12 +31,16 @@ export class SAP1 extends CircuitSimulator {
         return out
     } 
 
-    controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: number[], ctrl: Bus, resetOnZero = false): Bus {
+    optimizedROM(address: Bus, mem: Uint16Array, data: Bus) {
+        address.onChange(() => data.set(mem[toDec(address.get())]))
+    }
+
+    controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false): Bus {
         const nop = this.wire()
         const step = this.counter(this.bus(3), clk, this.High, this.or(reset, nop))
         const ctrlin = new Bus(step.wires.concat(opcode))
 
-        this.rom(ctrlin, microcode, ctrl)
+        this.optimizedROM(ctrlin, microcode, ctrl)
         if (resetOnZero) this.isZero(ctrl, nop)
 
         return step
@@ -117,7 +121,7 @@ export const microcodeTable: [Opcode, CtlLines][] = [
 
 export function buildMicrocode(table: [Opcode, CtlLines][]) {
     const steps = 8
-    const microcode = Array(0b100000 * steps).fill(0)
+    const microcode = new Uint16Array(0b100000 * steps)
     const fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
 
     for (let op = 0b00000; op <= 0b11111; op += 1) {
