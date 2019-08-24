@@ -1,52 +1,5 @@
 import { CircuitSimulator, Wire, Bus, toDec } from './circuitsimulator'
 
-export enum CTL {
-    A_IN    = 0b1000000000000000,
-    A_OUT   = 0b0100000000000000, 
-    B_IN    = 0b0010000000000000, 
-    B_OUT   = 0b0001000000000000, 
-    IR_IN   = 0b0000100000000000, 
-    IR_OUT  = 0b0000010000000000, 
-    PC_INC  = 0b0000001000000000, 
-    PC_IN   = 0b0000000100000000, 
-    PC_OUT  = 0b0000000010000000,
-    MAR_IN  = 0b0000000001000000, 
-    RAM_IN  = 0b0000000000100000, 
-    RAM_OUT = 0b0000000000010000, 
-    ALU_OUT = 0b0000000000001000
-}
-
-type Opcode = number
-type CtlLines = number[]
-
-export const microcodeTable: [Opcode, CtlLines][] = [
-    /* A <- xx   */ [0b00001, [CTL.PC_OUT | CTL.MAR_IN, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    /* B <- xx   */ [0b00010, [CTL.PC_OUT | CTL.MAR_IN, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    /* A <- B    */ [0b00100, [CTL.A_IN | CTL.B_OUT]],
-    /* B <- A    */ [0b00101, [CTL.B_IN | CTL.A_OUT]],
-    /* [xx] <- A */ [0b01000, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.A_OUT | CTL.PC_INC | CTL.RAM_IN]],
-    /* [xx] <- B */ [0b01001, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.B_OUT | CTL.PC_INC | CTL.RAM_IN]],
-    /* A <- [xx] */ [0b01010, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.A_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    /* B <- [xx] */ [0b01011, [CTL.PC_OUT | CTL.MAR_IN, CTL.MAR_IN | CTL.RAM_OUT, CTL.B_IN | CTL.PC_INC | CTL.RAM_OUT]],
-    /* A <- A+B  */ [0b10000, [CTL.PC_OUT | CTL.MAR_IN, CTL.ALU_OUT | CTL.A_IN]],
-    /* B <- A    */ [0b11111, [CTL.PC_OUT | CTL.MAR_IN, CTL.PC_IN | CTL.RAM_OUT]]
-]
-
-export function buildMicrocode(table: [Opcode, CtlLines][]) {
-    const steps = 8
-    const microcode = Array(0b100000 * steps).fill(0)
-    const fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
-
-    for (let op = 0b00000; op <= 0b11111; op += 1) {
-        microcode[op * steps + 0] = fetchSteps[0]
-        microcode[op * steps + 1] = fetchSteps[1]
-    }
-
-    table.forEach(([op, ctllines]) => ctllines.forEach((microop, ix) => microcode[op * steps + 2 + ix] = microop))
-
-    return microcode
-}
-
 export class SAP1 extends CircuitSimulator {    
     build(clk: Wire, reset: Wire, microcode: number[], mem: number[] = Array(256).fill(0)) {
         const nclk = this.inverter(clk)
@@ -74,7 +27,7 @@ export class SAP1 extends CircuitSimulator {
     }
 
     isZero(data: Bus, out: Wire): Wire {
-        data.trigger(() => out.delaySet(toDec(data) === 0x0, 0)) // Use a comparator here
+        data.onChange(() => out.schedule(toDec(data) === 0x0, 0)) // Use a comparator here 
         return out
     } 
 
@@ -91,11 +44,7 @@ export class SAP1 extends CircuitSimulator {
 
     programCounter({ data, clk, reset, inc = this.wire(), we = this.wire(), oe = this.wire(), out = data.clone() }: { data: Bus; clk: Wire; reset: Wire; inc?: Wire; we?: Wire; oe?: Wire; out?: Bus; }) {
         const [incremented, _] = this.incrementer(out)
-        this.connect(
-            this.register(this.mux([this.buffer(incremented, inc), data], we), clk, this.or(we, inc), reset), 
-            out
-        )
-
+        this.register(this.mux([this.buffer(incremented, inc), data], we), clk, this.or(we, inc), reset).connect(out) 
         this.buffer(out, oe, data)
 
         return { out, inc, we, oe }
@@ -112,4 +61,71 @@ export class SAP1 extends CircuitSimulator {
         this.buffer(sum, oe, out)
         return { a, b, out, sum, oe }
     }
+}
+
+export enum CTL {
+    A_IN    = 0b1000000000000000,
+    A_OUT   = 0b0100000000000000, 
+    B_IN    = 0b0010000000000000, 
+    B_OUT   = 0b0001000000000000, 
+    IR_IN   = 0b0000100000000000, 
+    IR_OUT  = 0b0000010000000000, 
+    PC_INC  = 0b0000001000000000, 
+    PC_IN   = 0b0000000100000000, 
+    PC_OUT  = 0b0000000010000000,
+    MAR_IN  = 0b0000000001000000, 
+    RAM_IN  = 0b0000000000100000, 
+    RAM_OUT = 0b0000000000010000, 
+    ALU_OUT = 0b0000000000001000
+}
+
+type Opcode = number
+type CtlLines = number[]
+
+export const microcodeTable: [Opcode, CtlLines][] = [
+    /* A <- xx   */ [0b00001, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.A_IN    | CTL.PC_INC | CTL.RAM_OUT]],
+
+    /* B <- xx   */ [0b00010, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.B_IN    | CTL.PC_INC | CTL.RAM_OUT]],
+
+    /* A <- B    */ [0b00100, [CTL.A_IN    | CTL.B_OUT]],
+    /* B <- A    */ [0b00101, [CTL.B_IN    | CTL.A_OUT]],
+
+    /* [xx] <- A */ [0b01000, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.MAR_IN  | CTL.RAM_OUT, 
+                               CTL.A_OUT   | CTL.PC_INC | CTL.RAM_IN]],
+
+    /* [xx] <- B */ [0b01001, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.MAR_IN  | CTL.RAM_OUT, 
+                               CTL.B_OUT   | CTL.PC_INC | CTL.RAM_IN]],
+
+    /* A <- [xx] */ [0b01010, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.MAR_IN  | CTL.RAM_OUT, 
+                               CTL.A_IN    | CTL.PC_INC | CTL.RAM_OUT]],
+
+    /* B <- [xx] */ [0b01011, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.MAR_IN  | CTL.RAM_OUT, 
+                               CTL.B_IN    | CTL.PC_INC | CTL.RAM_OUT]],
+
+    /* A <- A+B  */ [0b10000, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.ALU_OUT | CTL.A_IN]],
+
+    /* B <- A    */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
+                               CTL.PC_IN   | CTL.RAM_OUT]]
+]
+
+export function buildMicrocode(table: [Opcode, CtlLines][]) {
+    const steps = 8
+    const microcode = Array(0b100000 * steps).fill(0)
+    const fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
+
+    for (let op = 0b00000; op <= 0b11111; op += 1) {
+        microcode[op * steps + 0] = fetchSteps[0]
+        microcode[op * steps + 1] = fetchSteps[1]
+    }
+
+    table.forEach(([op, ctllines]) => ctllines.forEach((microop, ix) => microcode[op * steps + 2 + ix] = microop))
+
+    return microcode
 }

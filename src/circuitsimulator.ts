@@ -2,8 +2,6 @@ import { Simulator } from './simulator'
 
 // -----------
 
-const fromBin = (n: number, width: number): boolean[] => Array(width).fill(0).map((_, ix) => (n >> ix & 1) === 1)
-
 export const toDec = (bs: boolean | boolean[] | Bus | Wire): number => {
     if (typeof bs === 'boolean') return (bs ? 1 : 0)
     if (bs instanceof Wire) return (bs.get() ? 1 : 0)
@@ -11,139 +9,133 @@ export const toDec = (bs: boolean | boolean[] | Bus | Wire): number => {
     return bs.reduce((a, b, p) => a + ((b ? 1 : 0) << p), 0)
 }
 
-// -----------
-
+export const fromBin = (n: number, width: number): boolean[] => Array(width).fill(0).map((_, ix) => (n >> ix & 1) === 1)
 export const toHex = (bs: boolean[] | Bus, width: number = bs.length / 4): string => `0x${toDec(bs).toString(16).padStart(width, '0')}`
 export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string => `0b${toDec(bs).toString(2).padStart(width, '0')}`
 
 // -----------
 
-type CircuitAction = () => void 
+type NetObserver = () => void 
+type CircuitAction = { wire: number, state: boolean }
 
-interface Connector<T> {
+interface Net<T> {
     length: number
     get(): T
     set(s: T): void
-    delaySet(s: T, delay: number): void
-    trigger(a: CircuitAction): void
-    clone(): Connector<T> 
-    connect(to: Connector<T>): void
+    schedule(s: T, delay: number): void
+    onChange(a: NetObserver): void
+    clone(): Net<T> 
+    connect(to: Net<T>): void
 }
 
-export class Wire implements Connector<boolean> {
+export class Wire implements Net<boolean> {
     length = 1
 
-    constructor(private _simulator: CircuitSimulator, public _wireId: number, _signal: boolean = false) { 
-        _simulator.wireState.set(_wireId, _signal)
+    constructor(private _circuit: CircuitSimulator, public _netId: number, _signal: boolean = false) { 
+        _circuit.netList.set(_netId, _signal)
     }
 
-    clone() { return this._simulator.wire() }
-
-    get() { return this._simulator.getSignal(this._wireId) }
-    set(s: boolean) { this._simulator.setSignal(this._wireId, s) }
-
-    delaySet(s: boolean, delay = 0) {
-        this._simulator.schedule({ wire: this._wireId, state: s }, delay)
-    }
-
+    clone() { return this._circuit.wire() }
+    get() { return this._circuit.getSignal(this._netId) }
+    set(s: boolean) { this._circuit.setSignal(this._netId, s) }
+    onChange(a: NetObserver) { this._circuit.onChange(this._netId, a) }
+    onPosEdge(a: NetObserver) { this._circuit.onPosEdge(this._netId, a) }
     on() { this.set(true) }
     off() { this.set(false) }
 
-    trigger(a: CircuitAction) { this._simulator.onChange(this._wireId, a) }
-    posEdge(a: CircuitAction) { this._simulator.onPosEdge(this._wireId, a) }
+    schedule(s: boolean, delay = 0) {
+        this._circuit.schedule({ wire: this._netId, state: s }, delay)
+    }
 
     connect(to: Wire) {
-        this._simulator.merge(this._wireId, to._wireId)
-        to._wireId = this._wireId
+        this._circuit.merge(this._netId, to._netId)
+        to._netId = this._netId
     }
 }
 
-export class Bus extends Array<Wire> implements Connector<boolean[]> {
+export class Bus extends Array<Wire> implements Net<boolean[]> {
     constructor(public wires: Wire[]) { super(...wires) }
 
-    clone(): Bus { return new Bus(this.wires.map(w => w.clone())) }
-
+    clone() { return new Bus(this.wires.map(w => w.clone())) }
     get() { return this.wires.map(w => w.get()) }
+    onChange(a: NetObserver) { this.wires.forEach(w => w.onChange(a)) }
+    connect(to: Bus) { this.wires.forEach((w, ix) => w.connect(to[ix])) }
+    zero() { this.wires.forEach(w => w.off()) }
 
     set(signals: boolean[] | number) {
         if (typeof signals === 'number') signals = fromBin(signals, this.wires.length)
         signals.forEach((s, ix) => this.wires[ix].set(s))
     }
 
-    delaySet(signals: boolean[] | number, delay = 0) {
+    schedule(signals: boolean[] | number, delay = 0) {
         if (typeof signals === 'number') signals = fromBin(signals, this.wires.length)
-        signals.forEach((s, ix) => this.wires[ix].delaySet(s, delay))
+        signals.forEach((s, ix) => this.wires[ix].schedule(s, delay))
     }
 
-    trigger(a: CircuitAction) { this.wires.forEach(w => w.trigger(a)) }
-
-    slice(start?: number | undefined, end?: number | undefined): Wire[] { 
-        return this.wires.slice(start, end) 
-    }
-
-    connect(to: Bus) {
-        this.wires.forEach((w, ix) => w.connect(to[ix]))
+    slice(start?: number | undefined, end?: number | undefined) {
+        return this.wires.slice(start, end)
     }
 }
 
-export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}> {
-    private _wireId = 0
-    public wireState = new Map<number, boolean>()
-    public _actions = new Map<number, Array<CircuitAction>>()
-    public _posEdge = new Map<number, Array<CircuitAction>>()
+export class CircuitSimulator extends Simulator<CircuitAction> {
+    _idCounter = 0
 
-    protected readonly _ffDelay = 0
-    protected readonly _dffDelay = 0
-    protected readonly _gateDelay = 0
+    readonly _ffDelay = 0
+    readonly _dffDelay = 0
+    readonly _gateDelay = 0
 
-    public readonly High = this.wire(true)
-    public readonly Low = this.wire(false)
-    
-    execute(action: { wire: number, state: boolean }): void {
+    readonly netList = new Map<number, boolean>()
+    readonly observers = new Map<number, Array<NetObserver>>()
+    readonly posEdgeObs = new Map<number, Array<NetObserver>>()
+
+    readonly High = this.wire(true)
+    readonly Low = this.wire(false)
+
+    execute(action: CircuitAction): void {
         this.setSignal(action.wire, action.state)
     }
 
-    getSignal(id: number) { return this.wireState.get(id)! }
+    getSignal(id: number) { return this.netList.get(id)! }
 
     merge(from: number, to: number) {
         this.agenda.forEach(([_, cmd]) => { if (cmd.wire === to) cmd.wire = from })
 
-        const fromActions = this._actions.get(from)!;
-        const toActions = this._actions.get(to)!;
+        const fromActions = this.observers.get(from)!;
+        const toActions = this.observers.get(to)!;
         toActions.forEach(a => fromActions.push(a))
         toActions.length = 0
 
-        const fromPosEdge = this._posEdge.get(from)!;
-        const toPosEdge = this._posEdge.get(to)!;
+        const fromPosEdge = this.posEdgeObs.get(from)!;
+        const toPosEdge = this.posEdgeObs.get(to)!;
         toPosEdge.forEach(a => fromPosEdge.push(a))
         toPosEdge.length = 0
 
-        this.wireState.delete(to)
+        this.netList.delete(to)
     } 
 
     setSignal(id: number, s: boolean) {
         if (s !== this.getSignal(id)) {
-            this.wireState.set(id, s)
-            this._actions.get(id)!.forEach(a => a())
-            if (s) this._posEdge.get(id)!.forEach(a => a())
+            this.netList.set(id, s)
+            this.observers.get(id)!.forEach(a => a())
+            if (s) this.posEdgeObs.get(id)!.forEach(a => a())
         }
     }
 
-    onChange(id: number, a: CircuitAction) { 
-        this._actions.get(id)!.push(a)
+    onChange(id: number, a: NetObserver) { 
+        this.observers.get(id)!.push(a)
         a() 
     }
 
-    onPosEdge(id: number, a: CircuitAction) {
-        this._posEdge.get(id)!.push(a)
+    onPosEdge(id: number, a: NetObserver) {
+        this.posEdgeObs.get(id)!.push(a)
         if (this.getSignal(id)) a() 
     }
 
     wire(signal = false): Wire {
-        this._wireId += 1
-        this._actions.set(this._wireId, new Array<CircuitAction>())
-        this._posEdge.set(this._wireId, new Array<CircuitAction>())
-        return new Wire(this, this._wireId, signal)
+        this._idCounter += 1
+        this.observers.set(this._idCounter, new Array<NetObserver>())
+        this.posEdgeObs.set(this._idCounter, new Array<NetObserver>())
+        return new Wire(this, this._idCounter, signal)
     }
         
     bus(size: number, initSignal: number = 0) {
@@ -164,19 +156,15 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
         return this.tick
     }
 
-    connect<T, U extends Connector<T>>(from: U, to: U) {
-        from.connect(to)
-    }
-
     // ----------------------------------------------
     // Gates
     // ----------------------------------------------
 
     inverter(input: Wire, delay = 0) {
         const out = this.wire()
-        input.trigger(() => {
+        input.onChange(() => {
             const sig = !input.get()
-            out.delaySet(sig, this._gateDelay + delay)
+            out.schedule(sig, this._gateDelay + delay)
         })
         return out
     }
@@ -184,11 +172,11 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
     binaryOp(a: Wire, b: Wire, op: (a: boolean, b: boolean) => boolean, out = this.wire()) {
         const action = () => {
             const sig = op(a.get(), b.get())
-            out.delaySet(sig, this._gateDelay)
+            out.schedule(sig, this._gateDelay)
         }
         
-        a.trigger(action)
-        b.trigger(action)
+        a.onChange(action)
+        b.onChange(action)
 
         return out
     }
@@ -199,13 +187,13 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
     nor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out  }
     xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
 
-    buffer<T, U extends Connector<T>>(ins: U, we: Wire = this.High, outs = <U> ins.clone()) {
+    buffer<T, U extends Net<T>>(ins: U, we: Wire = this.High, outs = <U> ins.clone()) {
         const action = () => {
-            if (we.get()) outs.delaySet(ins.get(), this._gateDelay)
+            if (we.get()) outs.schedule(ins.get(), this._gateDelay)
         }
 
-        ins.trigger(action)
-        we.posEdge(action)
+        ins.onChange(action)
+        we.onPosEdge(action)
 
         return outs
     }
@@ -226,7 +214,7 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
 
 
     rom(address: Bus, mem: number[], data: Bus) {
-        address.trigger(() => data.set(mem[toDec(address.get())]))
+        address.onChange(() => data.set(mem[toDec(address.get())]))
     }
 
     // ----------------------------------------------
@@ -243,17 +231,16 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
         if (data.length !== 2 ** sel.length)
             throw new Error("Selection and data lines size mismatch")
 
-        const wes = this.bus(data.length)
+        const wes = this.decoder(sel)
         data.forEach((i, ix) => this.buffer(i, wes[ix], out))
-        this.decoder(sel, wes)
 
         return out
     }
 
     decoder(data: Bus | Wire, outs: Bus = this.bus(2 ** data.length)): Bus {
-        data.trigger(() => {
+        data.onChange(() => {
             const six = toDec(data.get())
-            outs.forEach((w, ix) => w.delaySet(ix === six))
+            outs.forEach((w, ix) => w.schedule(ix === six))
         })
 
         return outs
@@ -264,8 +251,7 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
     // ----------------------------------------------
 
     incrementer(a: Bus, outs = a.clone()): [Bus, Wire] {
-        const zero = a.clone()
-        return this.fulladder(a, zero, this.High, outs)
+        return this.fulladder(a, a.clone(), this.High, outs)
     }
 
     fulladder(a: Bus, b: Bus, carry: Wire, outs = a.clone()): [Bus, Wire] {
@@ -288,8 +274,7 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
 
     clock(interval: number = 1, state: boolean = false) {
         const out = this.wire(state)
-        out.trigger(() => out.delaySet(!out.get(), interval))
-        
+        out.onChange(() => out.schedule(!out.get(), interval))
         return out
     }
 
@@ -298,16 +283,16 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
         const out = this.wire()
         let state = initState
 
-        clk.posEdge(() => {
+        clk.onPosEdge(() => {
             const sig = input.get()
             const rst = reset.get()
             state = rst ? initState : sig
-            out.delaySet(state, this._dffDelay)
+            out.schedule(state, this._dffDelay)
         })
 
-        reset.posEdge(() => {
+        reset.onPosEdge(() => {
             state = initState
-            out.delaySet(state, this._dffDelay)
+            out.schedule(state, this._dffDelay)
         })
 
         return out
@@ -337,10 +322,10 @@ export class CircuitSimulator extends Simulator<{ wire: number, state: boolean}>
         const latchAction = () => latch.set(mem[toDec(address.get())])
         const writeAction = () => { if (we.get()) mem[toDec(address.get())] = toDec(data.get()) }
 
-        address.trigger(latchAction)
-        clk.posEdge(latchAction)
-        clk.posEdge(writeAction)
-        data.trigger(writeAction)
+        address.onChange(latchAction)
+        clk.onPosEdge(latchAction)
+        clk.onPosEdge(writeAction)
+        data.onChange(writeAction)
 
         const out = this.buffer(latch, oe)
 
