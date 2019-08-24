@@ -1,7 +1,9 @@
-export class Simulator<Action extends () => void> {
+export abstract class Simulator<Action> {
     tick = 0
     agenda = Array<[number, Action]>()
     statistics = { totalItems: 0 }
+
+    abstract execute(a: Action): void
 
     step() {
         this.tick += 1
@@ -15,7 +17,7 @@ export class Simulator<Action extends () => void> {
             if (items.length === 0) return
 
             this.agenda = this.agenda.filter(i => i[0] !== this.tick)
-            items.forEach(item => item[1]())
+            items.forEach(item => this.execute(item[1]))
         }
     }
 

@@ -18,18 +18,16 @@ export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string =>
 
 // -----------
 
-// [FIXME] Optimization: the parameter should be a wire, 
-// as it would solve multiple setSignals in Buses 
 type CircuitAction = () => void 
 
-interface Connector<T> {
-    suspendTriggers(): void
-    resumeTriggers(): void
-    length: number
-    getSignal(): T
-    setSignal(s: T): void
-    trigger(a: CircuitAction): void
-    clone(): Connector<T> 
+abstract class Connector<T> {
+    abstract suspendTriggers(): void
+    abstract resumeTriggers(): void
+    abstract length: number
+    abstract getSignal(): T
+    abstract setSignal(s: T): void
+    abstract trigger(a: CircuitAction): void
+    abstract clone(): Connector<T> 
 }
 
 export class Wire implements Connector<boolean> {
@@ -39,14 +37,16 @@ export class Wire implements Connector<boolean> {
     private _posEdge = new Array<CircuitAction>()
     private _suspendTriggers = false
 
-    constructor(private _simulator: CircuitSimulator, private _signal: boolean = false) { }
+    constructor(private _simulator: CircuitSimulator, private _wireId: number, _signal: boolean = false) { 
+        _simulator.wireState.set(_wireId, _signal)
+    }
 
     clone() { return this._simulator.wire() }
+    getSignal() { return this._simulator.wireState.get(this._wireId)! }
 
-    getSignal() { return this._signal }
     setSignal(s: boolean) {
-        if (s !== this._signal) {
-            this._signal = s
+        if (s !== this.getSignal()) {
+            this._simulator.wireState.set(this._wireId, s)
             if (!this._suspendTriggers) this._actions.forEach(a => a())
             if (!this._suspendTriggers && s) this._posEdge.forEach(a => a())
         }
@@ -56,7 +56,7 @@ export class Wire implements Connector<boolean> {
     off() { this.setSignal(false) }
 
     trigger(a: CircuitAction) { this._actions.push(a); a() }
-    posEdge(a: CircuitAction) { this._posEdge.push(a); if (this._signal) a() }
+    posEdge(a: CircuitAction) { this._posEdge.push(a); if (this.getSignal()) a() }
 
     suspendTriggers() { this._suspendTriggers = true }
     resumeTriggers() { this._suspendTriggers = false }
@@ -84,14 +84,23 @@ export class Bus extends Array<Wire> implements Connector<boolean[]> {
 }
 
 export class CircuitSimulator extends Simulator<CircuitAction> {
+    private _wireId = 0
+    public wireState = new Map<number, boolean>()
+
     protected readonly _ffDelay = 0
     protected readonly _dffDelay = 0
     protected readonly _gateDelay = 0
+
     public readonly High = this.wire(true)
     public readonly Low = this.wire(false)
+    
+    execute(a: CircuitAction): void {
+        a()
+    }
 
     wire(signal = false): Wire {
-        return new Wire(this, signal)
+        this._wireId += 1
+        return new Wire(this, this._wireId, signal)
     }
         
     bus(size: number, initSignal: number = 0) {
