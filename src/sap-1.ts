@@ -76,7 +76,7 @@ export class SAP1 extends CircuitSimulator {
     }
 
     isZero(data: Bus, out: Wire): Wire {
-        data.trigger(() => this.schedule(() => out.setSignal(toDec(data) === 0x0), 0)) // Use a comparator here
+        data.trigger(() => out.delaySet(toDec(data) === 0x0, 0)) // Use a comparator here
         return out
     } 
 

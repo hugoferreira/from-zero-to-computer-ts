@@ -17,12 +17,12 @@ describe('fulladder', () => {
             const b = s.bus(bits)
             const [sum, carry] = s.fulladder(a, b, (c === 1) ? s.High : s.Low)
 
-            a.setSignal(x)
-            b.setSignal(y)
+            a.set(x)
+            b.set(y)
             s.do()
 
             expect(toDec(sum)).eq((x + y + c) % (2 ** bits))
-            expect(carry.getSignal()).eq(x + y + c > (2 ** bits - 1))
+            expect(carry.get()).eq(x + y + c > (2 ** bits - 1))
         }))
     })
 })
@@ -34,7 +34,7 @@ describe('incrementer', () => {
 
     it('increments 8 bit values', () => {
         fc.assert(fc.property(fc.nat(255), (x) => {
-            a.setSignal(x)
+            a.set(x)
             s.do()
             expect(toDec(inc)).eq((x + 1) % 0x100)
         }))
@@ -42,9 +42,9 @@ describe('incrementer', () => {
 
     it('sets carry appropriately', () => {
         fc.assert(fc.property(fc.nat(255), (x) => {
-            a.setSignal(x)
+            a.set(x)
             s.do()
-            expect(carry.getSignal()).eq(x + 1 > 255)
+            expect(carry.get()).eq(x + 1 > 255)
         }))
     })
 })

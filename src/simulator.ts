@@ -10,14 +10,18 @@ export abstract class Simulator<Action> {
         this.do()
     }
 
-    do() {
+    do(): Action[] {
+        const executedItems = new Array<Action>()
         while (true) {
             // Later change it to a SortedMap and get rid of this nonsense
             const items = this.agenda.filter(i => i[0] === this.tick)
-            if (items.length === 0) return
+            if (items.length === 0) return executedItems
 
             this.agenda = this.agenda.filter(i => i[0] !== this.tick)
-            items.forEach(item => this.execute(item[1]))
+            items.forEach(item => {
+                this.execute(item[1])
+                executedItems.push(item[1])
+            })
         }
     }
 
@@ -26,13 +30,13 @@ export abstract class Simulator<Action> {
         this.agenda.push([this.tick + delay, item])
     }
 
-    forward(): number {
+    forward() {
         if (this.hasNext()) {
             this.tick = Math.min(... this.agenda.map(i => i[0]))
-            this.do()
+            return { tick: this.tick, items: this.do() }
         }
 
-        return this.tick
+        return { tick: this.tick, items: [] }
     }
 
     hasNext() {

@@ -21,8 +21,8 @@ describe('SAP-1 Computer', () => {
             const step = toDec(STEP)
             console.log(`Executing ${step}`)
             
-            if (step === 0) CTRL.setSignal(CTL.PC_INC)
-            else CTRL.setSignal(0x0)
+            if (step === 0) CTRL.set(CTL.PC_INC)
+            else CTRL.set(0x0)
 
             console.log(`Executing ${toBin(CTRL)}`)
             
@@ -46,9 +46,9 @@ describe('SAP-1 Computer', () => {
         for (let i = 0; i < 16 * 8; i += 1) {
             const step = toDec(STEP)
 
-            if (step === 3) CTRL.setSignal(CTL.PC_INC)
-            else CTRL.setSignal(0x0)
-            console.log(`STEP: ${step} PC_INC: ${PC_INC.getSignal()} CTRL: ${toBin(CTRL)}`)
+            if (step === 3) CTRL.set(CTL.PC_INC)
+            else CTRL.set(0x0)
+            console.log(`STEP: ${step} PC_INC: ${PC_INC.get()} CTRL: ${toBin(CTRL)}`)
 
             expect(toDec(STEP)).eq(i % 8)
             expect(toDec(DBUS)).eq(0)
@@ -97,7 +97,7 @@ describe('SAP-1 Computer', () => {
         expect(toDec(PC)).eq(5)
         expect(toDec(BUS)).eq(0)
 
-        BUS.setSignal(0xA0)
+        BUS.set(0xA0)
         s.posedge(clk)
         expect(toDec(PC)).eq(6)
         expect(toDec(BUS)).eq(0xA0)
@@ -119,7 +119,9 @@ describe('SAP-1 Computer', () => {
 
         PC_INC.on()
         expect(toDec(PC)).eq(0xA0)
+        expect(toDec(BUS)).eq(0xA0)
         s.posedge(clk)
+        expect(toDec(BUS)).eq(0xA0)
         expect(toDec(PC)).eq(0xA1)
         s.posedge(clk)
         s.posedge(clk)

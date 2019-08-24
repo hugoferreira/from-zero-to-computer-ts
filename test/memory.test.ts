@@ -11,30 +11,30 @@ describe('ram', () => {
 
         const { we: RAM_IN, oe: RAM_OUT } = s.ioram(abus, CLK, dbus, Array(0x100).fill(0))
 
-        abus.setSignal(0x00)
+        abus.set(0x00)
         s.posedge(CLK)
         expect(toDec(dbus)).eq(0x00)
 
         RAM_IN.on()
-        abus.setSignal(0x00)
-        dbus.setSignal(0x10)
+        abus.set(0x00)
+        dbus.set(0x10)
         s.posedge(CLK)  
 
-        abus.setSignal(0x01)
-        dbus.setSignal(0x20)
+        abus.set(0x01)
+        dbus.set(0x20)
         s.posedge(CLK)  
 
         RAM_IN.off()
         RAM_OUT.on()
-        abus.setSignal(0x00)
+        abus.set(0x00)
         s.posedge(CLK)  
         expect(toDec(dbus)).eq(0x10)
 
-        abus.setSignal(0x01)
+        abus.set(0x01)
         s.posedge(CLK)  
         expect(toDec(dbus)).eq(0x20)
 
-        abus.setSignal(0x02)
+        abus.set(0x02)
         s.posedge(CLK)  
         expect(toDec(dbus)).eq(0x00)
     })
@@ -52,7 +52,7 @@ describe('rom', () => {
         s.do()
 
         mem.forEach((v, ix) => {
-            abus.setSignal(ix)
+            abus.set(ix)
             expect(toDec(dbus)).eq(v)
         })
     })

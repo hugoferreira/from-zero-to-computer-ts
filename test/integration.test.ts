@@ -23,7 +23,7 @@ describe('bus, registers and adder', () => {
 
         expect(s.posedge(CLK)).eq(10)
 
-        DBUS.setSignal(0b1001)
+        DBUS.set(0b1001)
 
         expect(s.posedge(CLK)).eq(30) 
         expect(toDec(A_DATA)).eq(0)
@@ -36,7 +36,7 @@ describe('bus, registers and adder', () => {
         expect(toDec(B_DATA)).eq(0b1001)    
 
         B_IN.off()
-        DBUS.setSignal(0x0000)
+        DBUS.set(0x0000)
         A_IN.on()
         B_OUT.on()      // override data on DBUS
 
@@ -47,14 +47,14 @@ describe('bus, registers and adder', () => {
 
         B_OUT.off()
         DBUS[2].on()    // Slice and set wire
-        expect(B_IN.getSignal()).false
-        expect(A_IN.getSignal()).true
+        expect(B_IN.get()).false
+        expect(A_IN.get()).true
 
         expect(s.posedge(CLK)).eq(90)
         expect(toDec(A_DATA)).eq(0x0d) 
         expect(toDec(B_DATA)).eq(0x09) 
         expect(toDec(SUM_DATA)).eq(0x16) 
-        expect(CF_OUT.getSignal()).false
+        expect(CF_OUT.get()).false
 
         console.log(`Processed a total of ${s.statistics.totalItems} scheduled items.`)
     })

@@ -10,8 +10,8 @@ describe('buffer', () => {
 
         s.buffer(A, s.High, B)
         s.do()
-        expect(A.getSignal()).true
-        expect(B.getSignal()).true
+        expect(A.get()).true
+        expect(B.get()).true
     })
 
     it('isolate while off', () => {
@@ -24,18 +24,18 @@ describe('buffer', () => {
 
         A.on()
         s.do()
-        expect(A.getSignal()).true
-        expect(B.getSignal()).true
+        expect(A.get()).true
+        expect(B.get()).true
 
         B.off()
         s.do()
-        expect(A.getSignal()).true
-        expect(B.getSignal()).false
+        expect(A.get()).true
+        expect(B.get()).false
 
         B.on()
         A.off()
         s.do()
-        expect(A.getSignal()).false
-        expect(B.getSignal()).true
+        expect(A.get()).false
+        expect(B.get()).true
     })
 })

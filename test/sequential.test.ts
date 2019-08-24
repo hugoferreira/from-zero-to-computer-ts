@@ -33,7 +33,7 @@ describe('counters', () => {
         s.posedge(clk)
         expect(toDec(data)).eq(0x0)
         
-        data.setSignal(0xA)
+        data.set(0xA)
         expect(toDec(counter)).eq(0x3)
 
         s.posedge(clk)

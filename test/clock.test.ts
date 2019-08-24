@@ -8,7 +8,7 @@ describe('clock', () => {
         const clk = s.clock(3, true)
 
         s.do()
-        expect(clk.getSignal()).true
+        expect(clk.get()).true
     })
 
     it('posedge', () => {

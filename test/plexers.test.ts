@@ -14,14 +14,14 @@ describe('decoder', () => {
             const bus = s.bus(bits)
             const dec = s.decoder(bus)
 
-            bus.setSignal(v)
+            bus.set(v)
             s.do()
 
             // [FIXME] Javascript doesn't has precision to represent this as it should:
             // expect(toDec(dec)).eq(1 << v)
             // Maybe change to this later when I have SHL circuits and BigInts
 
-            dec.forEach((line, ix) => expect(line.getSignal()).eq(ix === v))
+            dec.forEach((line, ix) => expect(line.get()).eq(ix === v))
         }))
     })
 
@@ -33,11 +33,11 @@ describe('decoder', () => {
         expect(out.length).eq(2)
 
         s.do()
-        expect(toDec(out.getSignal())).eq(0b01)
+        expect(toDec(out.get())).eq(0b01)
 
         data.on()
         s.do()
-        expect(toDec(out.getSignal())).eq(0b10)
+        expect(toDec(out.get())).eq(0b10)
     })
 })
 
@@ -56,11 +56,11 @@ describe('multiplexer', () => {
             const mux = s.mux(data, sel)
 
             s.do()
-            expect(toDec(mux.getSignal())).eq(dataSignals[0])
+            expect(toDec(mux.get())).eq(dataSignals[0])
 
-            sel.setSignal(selSignal)
+            sel.set(selSignal)
             s.do()
-            expect(toDec(mux.getSignal())).eq(dataSignals[selSignal])
+            expect(toDec(mux.get())).eq(dataSignals[selSignal])
         }))
     })
 
@@ -75,29 +75,29 @@ describe('multiplexer', () => {
         sel.off()
 
         s.do()
-        expect(a.getSignal()).false
-        expect(b.getSignal()).false
-        expect(out.getSignal()).false
+        expect(a.get()).false
+        expect(b.get()).false
+        expect(out.get()).false
 
         sel.on()
         a.off()
         b.on()
 
         s.do()
-        expect(a.getSignal()).false
-        expect(b.getSignal()).true
-        expect(out.getSignal()).true
+        expect(a.get()).false
+        expect(b.get()).true
+        expect(out.get()).true
 
         sel.off()
         s.do()
-        expect(a.getSignal()).false
-        expect(b.getSignal()).true
-        expect(out.getSignal()).false
+        expect(a.get()).false
+        expect(b.get()).true
+        expect(out.get()).false
 
         a.on()
         s.do()
-        expect(a.getSignal()).true
-        expect(b.getSignal()).true
-        expect(out.getSignal()).true
+        expect(a.get()).true
+        expect(b.get()).true
+        expect(out.get()).true
     })
 })

@@ -20,7 +20,7 @@ describe('bus and registers', () => {
 
             initValues.forEach((v, ix) => {
                 const reg = regs[ix]
-                bus.setSignal(v)
+                bus.set(v)
                 reg.oe.off()
                 reg.we.on()
                 s.posedge(clk)
@@ -30,15 +30,15 @@ describe('bus and registers', () => {
             let currentValues = initValues
 
             swaps.forEach(([we, oe]) => {
-                bus.setSignal(0x00)
+                bus.set(0x00)
                 regs[we].we.on()
                 regs[oe].oe.on()
                 s.posedge(clk)
-                expect(toDec(regs[we].out.getSignal())).eq(toDec(regs[oe].out.getSignal()))
-                expect(toDec(bus.getSignal())).eq(toDec(regs[oe].out.getSignal()))
+                expect(toDec(regs[we].out.get())).eq(toDec(regs[oe].out.get()))
+                expect(toDec(bus.get())).eq(toDec(regs[oe].out.get()))
 
-                currentValues.forEach((v, ix) => { if (ix !== we) expect(toDec(regs[ix].out.getSignal())).eq(v) })
-                currentValues = regs.map(r => toDec(r.out.getSignal()))
+                currentValues.forEach((v, ix) => { if (ix !== we) expect(toDec(regs[ix].out.get())).eq(v) })
+                currentValues = regs.map(r => toDec(r.out.get()))
 
                 regs[we].we.off()
                 regs[oe].oe.off()
@@ -55,27 +55,27 @@ describe('bus and registers', () => {
 
             initValues.forEach((v, ix) => {
                 const reg = regs[ix]
-                bus.setSignal(v)
+                bus.set(v)
                 reg.oe.off()
                 reg.we.on()
                 s.posedge(clk)
-                expect(toDec(reg.out.getSignal())).eq(v)
-                expect(toDec(bus.getSignal())).eq(v)
+                expect(toDec(reg.out.get())).eq(v)
+                expect(toDec(bus.get())).eq(v)
                 reg.we.off()
                 s.posedge(clk)
             })
 
             let lastBusSignal = 0x00
-            bus.setSignal(lastBusSignal)
+            bus.set(lastBusSignal)
             
             initValues.forEach((v, ix) => {
                 s.posedge(clk)
                 const reg = regs[ix]
-                expect(toDec(reg.out.getSignal())).eq(v)
-                expect(toDec(bus.getSignal())).eq(lastBusSignal)
+                expect(toDec(reg.out.get())).eq(v)
+                expect(toDec(bus.get())).eq(lastBusSignal)
                 reg.oe.on()
                 s.posedge(clk)
-                lastBusSignal = toDec(bus.getSignal())
+                lastBusSignal = toDec(bus.get())
                 expect(lastBusSignal).eq(v)
                 reg.oe.off()
                 s.posedge(clk)
