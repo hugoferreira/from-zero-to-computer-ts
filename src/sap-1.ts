@@ -1,4 +1,4 @@
-import { CircuitSimulator, Bus, Wire, Low, High, toDec } from './circuitsimulator'
+import { CircuitSimulator, Wire, Bus, toDec } from './circuitsimulator'
 
 export enum CTL {
     A_IN    = 0b1000000000000000,
@@ -64,7 +64,7 @@ export class SAP1 extends CircuitSimulator {
 
         const OPCODE = new Bus(IR_DATA.slice(0, 5))
         const CTRL = new Bus([A_IN, A_OUT, B_IN, B_OUT, IR_IN, IR_OUT, PC_INC, PC_IN, PC_OUT, 
-                              MAR_IN, RAM_IN, RAM_OUT, ALU_OUT, Low, Low, Low].reverse())
+                              MAR_IN, RAM_IN, RAM_OUT, ALU_OUT, this.Low, this.Low, this.Low].reverse())
 
         const STEP = this.controlunit(OPCODE, clk, reset, microcode, CTRL, true)
         
@@ -81,8 +81,8 @@ export class SAP1 extends CircuitSimulator {
     } 
 
     controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: number[], ctrl: Bus, resetOnZero = false): Bus {
-        const nop = new Wire
-        const step = this.counter(this.bus(3), clk, High, this.or(reset, nop))
+        const nop = this.wire()
+        const step = this.counter(this.bus(3), clk, this.High, this.or(reset, nop))
         const ctrlin = new Bus(step.wires.concat(opcode))
 
         this.rom(ctrlin, microcode, ctrl)
@@ -91,7 +91,7 @@ export class SAP1 extends CircuitSimulator {
         return step
     }
 
-    programCounter({ data, clk, reset, inc = new Wire, we = new Wire, oe = new Wire, out = data.clone() }: { data: Bus; clk: Wire; reset: Wire; inc?: Wire; we?: Wire; oe?: Wire; out?: Bus; }) {
+    programCounter({ data, clk, reset, inc = this.wire(), we = this.wire(), oe = this.wire(), out = data.clone() }: { data: Bus; clk: Wire; reset: Wire; inc?: Wire; we?: Wire; oe?: Wire; out?: Bus; }) {
         const [incremented, _] = this.incrementer(out)
         this.connect(
             this.register(this.mux([this.buffer(incremented, inc), data], we), clk, this.or(we, inc), reset), 
@@ -103,14 +103,14 @@ export class SAP1 extends CircuitSimulator {
         return { out, inc, we, oe }
     }
     
-    busRegister({ bus, clk, reset = new Wire, we = new Wire, oe = new Wire }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
+    busRegister({ bus, clk, reset = this.wire(), we = this.wire(), oe = this.wire() }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
         const out = this.register(bus, clk, we, reset)
         this.buffer(out, oe, bus)
         return { out, we, oe }
     }
 
-    alu({ a, b, bus: out = a.clone(), oe = new Wire }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sum?: Bus }) {
-        const [sum, carry_out] = this.fulladder(a, b, Low)
+    alu({ a, b, bus: out = a.clone(), oe = this.wire() }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sum?: Bus }) {
+        const [sum, carry_out] = this.fulladder(a, b, this.Low)
         this.buffer(sum, oe, out)
         return { a, b, out, sum, oe }
     }

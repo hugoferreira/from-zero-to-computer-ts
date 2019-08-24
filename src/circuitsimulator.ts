@@ -39,9 +39,9 @@ export class Wire implements Connector<boolean> {
     private _posEdge = new Array<CircuitAction>()
     private _suspendTriggers = false
 
-    constructor(private _signal: boolean = false) { }
+    constructor(private _simulator: CircuitSimulator, private _signal: boolean = false) { }
 
-    clone() { return new Wire }
+    clone() { return this._simulator.wire() }
 
     getSignal() { return this._signal }
     setSignal(s: boolean) {
@@ -60,18 +60,6 @@ export class Wire implements Connector<boolean> {
 
     suspendTriggers() { this._suspendTriggers = true }
     resumeTriggers() { this._suspendTriggers = false }
-}
-
-export const High = new class extends Wire {
-    getSignal() { return true }
-    setSignal(s: boolean) { }
-    clone() { return this }
-}
-
-export const Low = new class extends Wire {
-    getSignal() { return false }
-    setSignal(s: boolean) { }
-    clone() { return this }
 }
 
 export class Bus extends Array<Wire> implements Connector<boolean[]> {
@@ -96,12 +84,18 @@ export class Bus extends Array<Wire> implements Connector<boolean[]> {
 }
 
 export class CircuitSimulator extends Simulator<CircuitAction> {
-    private readonly _ffDelay = 0
-    private readonly _dffDelay = 0
-    private readonly _gateDelay = 0
+    protected readonly _ffDelay = 0
+    protected readonly _dffDelay = 0
+    protected readonly _gateDelay = 0
+    public readonly High = this.wire(true)
+    public readonly Low = this.wire(false)
 
+    wire(signal = false): Wire {
+        return new Wire(this, signal)
+    }
+        
     bus(size: number, initSignal: number = 0) {
-        const bus = new Bus(Array(size).fill(0).map(_ => new Wire))
+        const bus = new Bus(Array(size).fill(0).map(_ => this.wire()))
         bus.setSignal(initSignal)
         return bus
     }
@@ -138,7 +132,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     inverter(input: Wire, delay = 0) {
-        const out = new Wire
+        const out = this.wire()
         input.trigger(() => {
             const sig = !input.getSignal()
             this.schedule(() => out.setSignal(sig), this._gateDelay + delay)
@@ -146,7 +140,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
-    binaryOp(a: Wire, b: Wire, op: (a: boolean, b: boolean) => boolean, out = new Wire) {
+    binaryOp(a: Wire, b: Wire, op: (a: boolean, b: boolean) => boolean, out = this.wire()) {
         const action = () => {
             const sig = op(a.getSignal(), b.getSignal())
             this.schedule(() => out.setSignal(sig), this._gateDelay)
@@ -158,13 +152,13 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
-    and(a: Wire, b: Wire, out = new Wire) { this.binaryOp(a, b, (x, y) => x && y, out); return out }
-    nand(a: Wire, b: Wire, out = new Wire) { this.binaryOp(a, b, (x, y) => !(x && y), out); return out  }
-    or(a: Wire, b: Wire, out = new Wire) { this.binaryOp(a, b, (x, y) => x || y, out); return out  }
-    nor(a: Wire, b: Wire, out = new Wire) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out  }
-    xor(a: Wire, b: Wire, out = new Wire) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
+    and(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x && y, out); return out }
+    nand(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x && y), out); return out  }
+    or(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x || y, out); return out  }
+    nor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out  }
+    xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
 
-    buffer<T, U extends Connector<T>>(ins: U, we: Wire = High, outs = <U> ins.clone()) {
+    buffer<T, U extends Connector<T>>(ins: U, we: Wire = this.High, outs = <U> ins.clone()) {
         const action = () => {
             if (we.getSignal()) {
                 const sig = ins.getSignal()
@@ -183,8 +177,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     // SR NOR Latch
-    flipflop(set: Wire = new Wire, reset: Wire = new Wire, q = new Wire) {
-        const nq = new Wire(true)
+    flipflop(set: Wire = this.wire(), reset: Wire = this.wire(), q = this.wire()) {
+        const nq = this.wire(true)
 
         this.nor(reset, nq, q)
         this.nor(set, q, nq)
@@ -240,7 +234,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const cout = a.reduce((cin, w, ix) => {
             this.connect(this.xor(w, cin), outs[ix])
             return this.and(w, cin)
-        }, High)
+        }, this.High)
 
         return [outs, cout]
     }
@@ -260,7 +254,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     clock(interval: number = 1, initSignal: boolean = false) {
-        const out = new Wire
+        const out = this.wire()
         out.setSignal(initSignal)
 
         const ticktack = () => {
@@ -273,8 +267,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // PosEdge D Flip-Flop { Optimized }
-    dff(input: Wire, clk: Wire, initState: boolean = false, reset: Wire = Low) {
-        const out = new Wire
+    dff(input: Wire, clk: Wire, initState: boolean = false, reset: Wire = this.Low) {
+        const out = this.wire()
         let state = initState
 
         clk.posEdge(() => {
@@ -290,20 +284,20 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
-    register(ins: Bus, clk: Wire, we: Wire = High, reset: Wire = Low) {
+    register(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
         return new Bus(this.buffer(ins, we).wires.map(w => this.dff(w, clk, false, reset)))
         // return new Bus(ins.wires.map(w => this.dff(w, this.and(clk, we), false, reset)))
     }
 
-    counter(data: Bus, clk: Wire, we: Wire = Low, reset: Wire, out: Bus = data.clone()): Bus {
+    counter(data: Bus, clk: Wire, we: Wire = this.Low, reset: Wire, out: Bus = data.clone()): Bus {
         const innerData = this.buffer(data, we)
-        const r_out = this.register(innerData, clk, High, reset)
+        const r_out = this.register(innerData, clk, this.High, reset)
         this.incrementer(r_out, innerData)
         this.connect(r_out, out)
         return out
     }
 
-    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = new Wire, oe: Wire = new Wire) {
+    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = this.wire(), oe: Wire = this.wire()) {
         if (mem.length !== 2 ** address.length) throw Error("Invalid memory size for addressing range")
         const latch = data.clone()
         const latchAction = () => latch.setSignal(mem[toDec(address.getSignal())])
@@ -319,7 +313,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return { out, we, oe, mem }
     }
 
-    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = new Wire, oe: Wire = new Wire) {
+    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: number[] = Array(2 ** address.length).fill(0), we: Wire = this.wire(), oe: Wire = this.wire()) {
         const { out } = this.ram(address, clk, data, mem, we, oe)
         this.connect(out, data)
         return { out, we, oe, mem }

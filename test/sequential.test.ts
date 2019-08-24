@@ -1,11 +1,11 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, Low, toDec, High } from '../src/circuitsimulator'
+import { CircuitSimulator, toDec } from '../src/circuitsimulator'
 
 describe('counters', () => {
     it('increment and overflow', () => {
         const s = new CircuitSimulator()
         const clk = s.clock(1, false)
-        const counter = s.counter(s.bus(2), clk, Low, Low)
+        const counter = s.counter(s.bus(2), clk, s.Low, s.Low)
         const threebitcycle = [1, 2, 3, 0, 1, 2, 3, 0]
 
         s.do()
@@ -21,8 +21,8 @@ describe('counters', () => {
         const s = new CircuitSimulator()
         const clk = s.clock(1, false)
         const data = s.bus(8)
-        const we = new Wire
-        const counter = s.counter(data, clk, we, Low)
+        const we = s.wire()
+        const counter = s.counter(data, clk, we, s.Low)
 
         s.posedge(clk)
         expect(toDec(data)).eq(0x0)
@@ -47,8 +47,8 @@ describe('counters', () => {
     it('unclocked reset', () => {
         const s = new CircuitSimulator()
         const clk = s.clock(1, false)
-        const reset = new Wire 
-        const counter = s.counter(s.bus(8), clk, Low, reset)
+        const reset = s.wire() 
+        const counter = s.counter(s.bus(8), clk, s.Low, reset)
     
         s.posedge(clk)
         s.posedge(clk)

@@ -1,12 +1,12 @@
 import { expect } from "chai"
-import { Wire, toDec, toBin, Low, Bus, toHex } from '../src/circuitsimulator'
+import { toDec, toBin, Bus } from '../src/circuitsimulator'
 import { SAP1, CTL } from '../src/sap-1'
 
 describe('SAP-1 Computer', () => {
     it('NOP', () => {
         const s = new SAP1()
         const CLK = s.clock(1, false)
-        const RESET = new Wire
+        const RESET = s.wire()
         const ram = Array<number>(256).fill(0)
 
         const computer = s.build(CLK, RESET, Array(0x100).fill(0), ram)
@@ -36,11 +36,11 @@ describe('SAP-1 Computer', () => {
     it('PC Basic', () => {
         const s = new SAP1()
         const CLK = s.clock(2, false)
-        const RESET = new Wire
+        const RESET = s.wire()
         const DBUS = s.bus(8)
 
         const { out: PC_DATA, inc: PC_INC } = s.programCounter({ data: DBUS, clk: CLK, reset: RESET })
-        const CTRL = new Bus([Low, Low, Low, Low, Low, Low, PC_INC, Low, Low, Low, Low, Low, Low, Low, Low, Low].reverse())
+        const CTRL = new Bus([s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, PC_INC, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low, s.Low].reverse())
         const STEP = s.controlunit(s.bus(5), CLK, RESET, Array(0x100).fill(0), CTRL)
 
         for (let i = 0; i < 16 * 8; i += 1) {
@@ -61,7 +61,7 @@ describe('SAP-1 Computer', () => {
         const s = new SAP1()
         const bus = s.bus(8)
         const clk = s.clock(1, false)
-        const reset = new Wire
+        const reset = s.wire()
         const ram = Array<number>(256).fill(0)
         const program = [0x01, 0x03]
         
@@ -78,7 +78,7 @@ describe('SAP-1 Computer', () => {
         const s = new SAP1()
 
         const clk = s.clock(3)
-        const reset = new Wire
+        const reset = s.wire()
         const BUS = s.bus(8)
 
         const { out: PC, inc: PC_INC, we: PC_IN, oe: PC_OUT } = s.programCounter({ data: BUS, clk, reset })

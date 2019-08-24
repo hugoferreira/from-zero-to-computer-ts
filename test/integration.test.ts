@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, Low, toDec, High } from '../src/circuitsimulator'
+import { CircuitSimulator, toDec } from '../src/circuitsimulator'
 
 describe('bus, registers and adder', () => {
     it('should do stuff', () => {
@@ -8,17 +8,17 @@ describe('bus, registers and adder', () => {
         const CLK = s.clock(10)
         const DBUS = s.bus(8)
 
-        const A_IN = new Wire
-        const B_IN = new Wire
+        const A_IN = s.wire()
+        const B_IN = s.wire()
         const A_DATA = s.register(DBUS, CLK, A_IN)
         const B_DATA = s.register(DBUS, CLK, B_IN)
 
-        const A_OUT = new Wire
-        const B_OUT = new Wire
+        const A_OUT = s.wire()
+        const B_OUT = s.wire()
         s.buffer(A_DATA, A_OUT, DBUS)
         s.buffer(B_DATA, B_OUT, DBUS)
 
-        const CF_IN = new Wire
+        const CF_IN = s.wire()
         const [SUM_DATA, CF_OUT] = s.fulladder(A_DATA, B_DATA, CF_IN)
 
         expect(s.posedge(CLK)).eq(10)

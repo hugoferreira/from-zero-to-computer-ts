@@ -13,7 +13,7 @@ const program = [0x01, 0x01, 0x02, 0x02, 0x10, 0x08, 0x1C, 0x1F, 0x04] // WTF? B
 
 const s = new SAP1()
 const CLK = s.clock(1, false)
-const RESET = new Wire
+const RESET = s.wire()
 const ram = Array<number>(256).fill(0)
 
 const computer = s.build(CLK, RESET, buildMicrocode(microcodeTable), ram)

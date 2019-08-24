@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, toDec, High, Bus } from '../src/circuitsimulator'
+import { CircuitSimulator, toDec } from '../src/circuitsimulator'
 import * as fc from 'fast-check'
 
 describe('decoder', () => {
@@ -27,7 +27,7 @@ describe('decoder', () => {
 
     it('one bit decoder', () => {
         const s = new CircuitSimulator()
-        const data = new Wire
+        const data = s.wire()
         const out = s.decoder(data)
 
         expect(out.length).eq(2)
@@ -66,9 +66,9 @@ describe('multiplexer', () => {
 
     it('one bit sel/data', () => {
         const s = new CircuitSimulator()
-        const sel = new Wire
-        const a = new Wire
-        const b = new Wire
+        const sel = s.wire()
+        const a = s.wire()
+        const b = s.wire()
 
         const out = s.mux([a, b], sel)
 

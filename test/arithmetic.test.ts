@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CircuitSimulator, Low, toDec, High } from '../src/circuitsimulator'
+import { CircuitSimulator, toDec } from '../src/circuitsimulator'
 import * as fc from 'fast-check'
 
 describe('fulladder', () => {
@@ -15,7 +15,7 @@ describe('fulladder', () => {
             const s = new CircuitSimulator()
             const a = s.bus(bits)
             const b = s.bus(bits)
-            const [sum, carry] = s.fulladder(a, b, (c === 1) ? High : Low)
+            const [sum, carry] = s.fulladder(a, b, (c === 1) ? s.High : s.Low)
 
             a.setSignal(x)
             b.setSignal(y)

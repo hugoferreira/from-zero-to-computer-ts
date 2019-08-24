@@ -1,14 +1,14 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, Low, toDec, High } from '../src/circuitsimulator'
+import { CircuitSimulator, toDec } from '../src/circuitsimulator'
 
 describe('buffer', () => {
     it('pass stuff while on', () => {
         const s = new CircuitSimulator()
 
-        const A = new Wire(true)
-        const B = new Wire(false)
+        const A = s.wire(true)
+        const B = s.wire(false)
 
-        s.buffer(A, High, B)
+        s.buffer(A, s.High, B)
         s.do()
         expect(A.getSignal()).true
         expect(B.getSignal()).true
@@ -17,10 +17,10 @@ describe('buffer', () => {
     it('isolate while off', () => {
         const s = new CircuitSimulator()
 
-        const A = new Wire(false)
-        const B = new Wire(true)
+        const A = s.wire(false)
+        const B = s.wire(true)
 
-        s.buffer(A, Low, B)
+        s.buffer(A, s.Low, B)
 
         A.on()
         s.do()

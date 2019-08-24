@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, Low, toDec, toHex, High } from '../src/circuitsimulator'
+import { CircuitSimulator } from '../src/circuitsimulator'
 
 describe('flipflop', () => {
     it('should latch', () => {

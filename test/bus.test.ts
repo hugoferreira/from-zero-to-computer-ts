@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CircuitSimulator, Wire, Low, toDec, High } from '../src/circuitsimulator'
+import { toDec } from '../src/circuitsimulator'
 import * as fc from 'fast-check'
 import { SAP1 } from "../src/sap-1";
 
@@ -14,7 +14,7 @@ describe('bus and registers', () => {
         fc.assert(fc.property(testCase, ([nRegisters, initValues, swaps]) => {
             const s = new SAP1()
             const clk = s.clock(1)
-            const reset = new Wire
+            const reset = s.wire()
             const bus = s.bus(8)
             const regs = Array(nRegisters).fill(0).map(r => s.busRegister({ bus, clk, reset }))
 
