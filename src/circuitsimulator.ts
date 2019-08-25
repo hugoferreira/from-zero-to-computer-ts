@@ -179,12 +179,20 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     nor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out  }
     xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
 
-    buffer<T, U extends Net<T>>(ins: U, we: Wire = this.High, outs = <U> ins.clone()) {
-        const action = () => { if (we.get()) outs.schedule(ins.get(), this._gateDelay) }
+    bufferWire(i: Wire, we: Wire = this.High, o = i.clone()) {
+        const action = () => { if (we.get()) o.schedule(i.get(), this._gateDelay) }
 
-        ins.onChange(action)
+        i.onChange(action)
         we.onPosEdge(action)
 
+        return o
+    }
+
+    buffer(ins: Wire, we: Wire, outs?: Wire): Wire;
+    buffer(ins: Bus, we: Wire, outs?: Bus): Bus;
+    buffer(ins: Wire | Bus, we: Wire = this.High, outs = ins.clone()) {
+        if (ins instanceof Wire) this.bufferWire(ins, we, <Wire> outs)
+        else if (ins instanceof Bus) ins.forEach((i, ix) => this.bufferWire(i, we, (<Bus> outs)[ix]))
         return outs
     }
 
@@ -216,12 +224,14 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
         
     // Multiplexer { Optimized }
-    mux<U extends Bus | Wire>(data: Array<U>, sel: Bus | Wire, out = <U> data[0].clone()): U {
+    mux(data: Array<Wire>, sel: Bus | Wire, out?: Wire): Wire;
+    mux(data: Array<Bus>, sel: Bus | Wire, out?: Bus): Bus;
+    mux(data: Array<Wire|Bus>, sel: Wire | Bus, out = data[0].clone()): Wire | Bus {
         if (data.length !== 2 ** sel.length)
             throw new Error("Selection and data lines size mismatch")
 
         const wes = this.decoder(sel)
-        data.forEach((i, ix) => this.buffer(i, wes[ix], out))
+        data.forEach((i, ix) => this.buffer(<any> i, wes[ix], <any> out))
 
         return out
     }
@@ -240,7 +250,12 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     incrementer(a: Bus, outs = a.clone()): [Bus, Wire] {
-        return this.fulladder(a, a.clone(), this.High, outs)
+        const cout = a.reduce((cin, w, ix) => {
+            this.xor(w, cin).connect(outs[ix])
+            return this.and(w, cin)
+        }, this.High)
+
+        return [outs, cout]
     }
 
     fulladder(a: Bus, b: Bus, carry: Wire, outs = a.clone()): [Bus, Wire] {
