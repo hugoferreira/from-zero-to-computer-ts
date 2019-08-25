@@ -12,14 +12,19 @@ s.build(CLK, RESET, buildMicrocode(microcodeTable), ram)
 s.load(ram, program)
 s.do()
 
-console.log(`NetList size is ${s.netList.size}`)
+const cycles = 500000n
+const warmup = 10000n
+
+console.log(`NetList size is ${s.netList.length}`)
+
+console.log(`Warming up...`)
+
+for (let i = 0; i <= warmup; i += 1) s.posedge(CLK)
+
 console.log(`Beginning performance test...`)
 
 const start = performance.now()
-const cycles = 200000n
-
 for (let i = 0; i <= cycles; i += 1) s.posedge(CLK)
-
 const end = BigInt(Math.floor(performance.now() - start))
 
 console.log(`Executed ${cycles} full cycles in ${end}ms ~= ${(cycles * 1000n) / end} μops/s`)

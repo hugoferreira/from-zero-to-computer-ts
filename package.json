@@ -25,6 +25,6 @@
         "build": "tsc",
         "test": "mocha -r ts-node/register test/**/*.test.ts",
         "start": "npm run build; node build/main.js",
-        "perf": "npm run build; node build/performance.js"
+        "perf": "npm run build; node --prof build/performance.js"
     }
 }

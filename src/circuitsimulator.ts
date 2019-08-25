@@ -32,7 +32,7 @@ export class Wire implements Net<boolean> {
     length = 1
 
     constructor(private _circuit: CircuitSimulator, public _netId: number, _signal: boolean = false) { 
-        _circuit.netList.set(_netId, _signal)
+        _circuit.netList[_netId] = _signal
     }
 
     clone() { return this._circuit.wire() }
@@ -84,9 +84,9 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     readonly _dffDelay = 0
     readonly _gateDelay = 0
 
-    readonly netList = new Map<number, boolean>()
-    readonly observers = new Map<number, Array<NetObserver>>()
-    readonly posEdgeObs = new Map<number, Array<NetObserver>>()
+    readonly netList = new Array<boolean>()
+    readonly observers = new Array<Array<NetObserver>>()
+    readonly posEdgeObs = new Array<Array<NetObserver>>()
 
     readonly High = this.wire(true)
     readonly Low = this.wire(false)
@@ -95,46 +95,44 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         this.setSignal(action.wire, action.state)
     }
 
-    getSignal(id: number) { return this.netList.get(id)! }
+    getSignal(id: number) { return this.netList[id] }
 
     merge(from: number, to: number) {
         this.agenda.forEach(([_, cmd]) => { if (cmd.wire === to) cmd.wire = from })
 
-        const fromActions = this.observers.get(from)!;
-        const toActions = this.observers.get(to)!;
+        const fromActions = this.observers[from]!;
+        const toActions = this.observers[to]!;
         toActions.forEach(a => fromActions.push(a))
         toActions.length = 0
 
-        const fromPosEdge = this.posEdgeObs.get(from)!;
-        const toPosEdge = this.posEdgeObs.get(to)!;
+        const fromPosEdge = this.posEdgeObs[from]!;
+        const toPosEdge = this.posEdgeObs[to]!;
         toPosEdge.forEach(a => fromPosEdge.push(a))
         toPosEdge.length = 0
-
-        this.netList.delete(to)
     } 
 
     setSignal(id: number, s: boolean) {
         if (s !== this.getSignal(id)) {
-            this.netList.set(id, s)
-            this.observers.get(id)!.forEach(a => a())
-            if (s) this.posEdgeObs.get(id)!.forEach(a => a())
+            this.netList[id] = s
+            for (const a of this.observers[id]) a()
+            if (s) for (const a of this.posEdgeObs[id]) a()
         }
     }
 
     onChange(id: number, a: NetObserver) { 
-        this.observers.get(id)!.push(a)
+        this.observers[id]!.push(a)
         a() 
     }
 
     onPosEdge(id: number, a: NetObserver) {
-        this.posEdgeObs.get(id)!.push(a)
+        this.posEdgeObs[id]!.push(a)
         if (this.getSignal(id)) a() 
     }
 
     wire(signal = false): Wire {
         this._idCounter += 1
-        this.observers.set(this._idCounter, new Array<NetObserver>())
-        this.posEdgeObs.set(this._idCounter, new Array<NetObserver>())
+        this.observers[this._idCounter] = new Array<NetObserver>()
+        this.posEdgeObs[this._idCounter] = new Array<NetObserver>()
         return new Wire(this, this._idCounter, signal)
     }
         
@@ -160,20 +158,14 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // Gates
     // ----------------------------------------------
 
-    inverter(input: Wire, delay = 0) {
+    inverter(input: Wire) {
         const out = this.wire()
-        input.onChange(() => {
-            const sig = !input.get()
-            out.schedule(sig, this._gateDelay + delay)
-        })
+        input.onChange(() => out.schedule(!input.get(), this._gateDelay))
         return out
     }
 
     binaryOp(a: Wire, b: Wire, op: (a: boolean, b: boolean) => boolean, out = this.wire()) {
-        const action = () => {
-            const sig = op(a.get(), b.get())
-            out.schedule(sig, this._gateDelay)
-        }
+        const action = () => out.schedule(op(a.get(), b.get()), this._gateDelay)
         
         a.onChange(action)
         b.onChange(action)
@@ -188,9 +180,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
 
     buffer<T, U extends Net<T>>(ins: U, we: Wire = this.High, outs = <U> ins.clone()) {
-        const action = () => {
-            if (we.get()) outs.schedule(ins.get(), this._gateDelay)
-        }
+        const action = () => { if (we.get()) outs.schedule(ins.get(), this._gateDelay) }
 
         ins.onChange(action)
         we.onPosEdge(action)

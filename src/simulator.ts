@@ -1,7 +1,6 @@
 export abstract class Simulator<Action> {
     tick = 0
     agenda = Array<[number, Action]>()
-    statistics = { totalItems: 0 }
 
     abstract execute(a: Action): void
 
@@ -10,39 +9,37 @@ export abstract class Simulator<Action> {
         this.do()
     }
 
-    do(): Action[] {
-        const executedItems = new Array<Action>()
+    do() {
         while (true) {
-            // Later change it to a SortedMap and get rid of this nonsense
-            const items = this.agenda.filter(i => i[0] === this.tick)
-            if (items.length === 0) return executedItems
+            const newAgenda = Array<[number, Action]>()
+            let processed = 0
 
-            this.agenda = this.agenda.filter(i => i[0] !== this.tick)
-            
-            items.forEach(item => {
-                this.execute(item[1])
-                executedItems.push(item[1])
-            })
+            for (let ix = 0; ix < this.agenda.length; ix += 1) {
+                const item = this.agenda[ix]
+                if (item[0] === this.tick) { processed += 1; this.execute(item[1]) }
+                else newAgenda.push(item)
+            }
+
+            if (processed === 0) return
+            this.agenda = newAgenda
         }
     }
 
     schedule(item: Action, delay: number = 0) {
-        this.statistics.totalItems += 1
         this.agenda.push([this.tick + delay, item])
     }
 
     forward() {
         if (this.hasNext()) {
-            // Renormalize tick values every 100000 ticks so it doesn't overflow
+            // Renormalize tick values every 10000 ticks so it doesn't overflow
             if (this.tick > 10000) this.agenda = this.agenda.map(([t, v]) => [t - 10000, v])
             this.tick = Math.min(... this.agenda.map(i => i[0]))
-            return { tick: this.tick, items: this.do() }
+            // this.tick = this.agenda.reduce((min, [t, _]) => (t < min) ? t : min, Number.POSITIVE_INFINITY)
+            this.do()
         }
 
-        return { tick: this.tick, items: [] }
+        return this.tick
     }
 
-    hasNext() {
-        return this.agenda.length !== 0
-    }
+    hasNext() { return this.agenda.length !== 0 }
 }
