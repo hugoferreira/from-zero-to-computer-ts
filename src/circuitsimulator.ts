@@ -10,7 +10,8 @@ export const toDec = (bs: boolean | boolean[] | Bus | Wire): number => {
     return bs.reduce((a, b, p) => b ? (a + (1 << p)) : a, 0)
 }
 
-export const fromBin = (n: number, width: number): boolean[] => Array(width).fill(false).map((_, ix) => (n >>> ix & 1) === 1)
+export const fromBin = (n: number, width: number): boolean[] => [...Array(width)].map((_, ix) => (n >>> ix & 1) === 1)
+
 export const toHex = (bs: boolean[] | Bus, width: number = bs.length / 4): string => `0x${toDec(bs).toString(16).padStart(width, '0')}`
 export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string => `0b${toDec(bs).toString(2).padStart(width, '0')}`
 
@@ -33,7 +34,7 @@ export class Wire implements Net<boolean> {
     length = 1
 
     constructor(private _circuit: CircuitSimulator, public _netId: number, _signal: boolean = false) { 
-        _circuit.netList[_netId] = _signal
+        this.set(_signal)
     }
 
     clone() { return this._circuit.wire() }
@@ -203,7 +204,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
 
     // SR NOR Latch
     flipflop(set: Wire = this.wire(), reset: Wire = this.wire(), q = this.wire()) {
-        const nq = this.wire(true)
+        const nq = this.wire(!q.get())
 
         this.nor(reset, nq, q)
         this.nor(set, q, nq)
@@ -283,6 +284,16 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
+    // PosEdge D Flip-Flop
+    dlatch(input: Wire, clk: Wire, initState: boolean = false, reset: Wire = this.Low) {
+        const out = this.wire(initState)
+        const rst = this.nand(input, clk)
+        const set = this.nand(this.inverter(input), clk)
+        this.flipflop(set, rst, out)
+
+        return out
+    }
+
     // PosEdge D Flip-Flop { Optimized }
     dff(input: Wire, clk: Wire, initState: boolean = false, reset: Wire = this.Low) {
         const out = this.wire()
@@ -301,6 +312,16 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return out
     }
 
+    // Edge-Triggered Arbitrary Length Register { Optimized }
+    fastRegister(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
+        const out = ins.clone()
+        let state = ins.get()
+        clk.onPosEdge(() => { if (we.get()) { state = ins.get(); out.set(state) }})
+        reset.onPosEdge(() => { out.set(0x00); state = out.get() })
+        return out
+    }
+
+    // PosEdge Array of D Flip-Flops { Optimized }
     register(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
         return new Bus(this.buffer(ins, we).wires.map(w => this.dff(w, clk, false, reset)))
 

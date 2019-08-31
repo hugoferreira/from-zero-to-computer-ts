@@ -27,20 +27,39 @@ export class SAP1 extends CircuitSimulator {
     }
 
     isZero(data: Bus, out: Wire): Wire {
-        data.onChange(() => out.schedule(toDec(data) === 0x0, 0)) // Use a comparator here 
+        data.onChange(() => out.schedule(toDec(data) === 0, 0)) // Use a comparator here 
         return out
     } 
 
-    optimizedROM(address: Bus, mem: Uint16Array, data: Bus) {
+    clockedROM(address: Bus, clk: Wire, mem: Uint16Array, data: Bus) {
+        clk.onPosEdge(() => data.set(mem[toDec(address.get())]))
+    }
+
+    ROM(address: Bus, mem: Uint16Array, data: Bus) {
         address.onChange(() => data.set(mem[toDec(address.get())]))
     }
+
+    /*
+    fastcontrol(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false) {
+        let n = 0x0
+        const step = this.bus(3)
+        const ctrlin = new Bus(step.wires.concat(opcode))
+        clk.onPosEdge(() => {
+            step.set(n)
+            this.clockedROM(ctrlin, clk, microcode, ctrl)
+            if (reset.get() || (resetOnZero && toDec(ctrl) === 0)) n = 0x0 
+            else n = (n + 1) % 8
+        })
+
+        return step
+    } */
 
     controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false): Bus {
         const nop = this.wire()
         const step = this.counter(this.bus(3), clk, this.High, this.or(reset, nop))
         const ctrlin = new Bus(step.wires.concat(opcode))
 
-        this.optimizedROM(ctrlin, microcode, ctrl)
+        this.clockedROM(ctrlin, clk, microcode, ctrl)
         if (resetOnZero) this.isZero(ctrl, nop)
 
         return step
@@ -55,7 +74,7 @@ export class SAP1 extends CircuitSimulator {
     }
     
     busRegister({ bus, clk, reset = this.wire(), we = this.wire(), oe = this.wire() }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
-        const out = this.register(bus, clk, we, reset)
+        const out = this.fastRegister(bus, clk, we, reset)
         this.buffer(out, oe, bus)
         return { out, we, oe }
     }
