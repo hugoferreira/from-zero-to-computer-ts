@@ -87,19 +87,19 @@ export class SAP1 extends CircuitSimulator {
 }
 
 export enum CTL {
-    A_IN    = 0b1000000000000000,
-    A_OUT   = 0b0100000000000000, 
-    B_IN    = 0b0010000000000000, 
-    B_OUT   = 0b0001000000000000, 
-    IR_IN   = 0b0000100000000000, 
-    IR_OUT  = 0b0000010000000000, 
-    PC_INC  = 0b0000001000000000, 
-    PC_IN   = 0b0000000100000000, 
-    PC_OUT  = 0b0000000010000000,
-    MAR_IN  = 0b0000000001000000, 
-    RAM_IN  = 0b0000000000100000, 
-    RAM_OUT = 0b0000000000010000, 
-    ALU_OUT = 0b0000000000001000
+    A_IN    = 1 << 15,
+    A_OUT   = 1 << 14, 
+    B_IN    = 1 << 13, 
+    B_OUT   = 1 << 12, 
+    IR_IN   = 1 << 11, 
+    IR_OUT  = 1 << 10, 
+    PC_INC  = 1 << 9, 
+    PC_IN   = 1 << 8, 
+    PC_OUT  = 1 << 7,
+    MAR_IN  = 1 << 6, 
+    RAM_IN  = 1 << 5, 
+    RAM_OUT = 1 << 4, 
+    ALU_OUT = 1 << 3
 }
 
 type Opcode = number
@@ -134,7 +134,7 @@ export const microcodeTable: [Opcode, CtlLines][] = [
     /* A <- A+B  */ [0b10000, [CTL.PC_OUT  | CTL.MAR_IN, 
                                CTL.ALU_OUT | CTL.A_IN]],
 
-    /* B <- A    */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
+    /* PC <- xx  */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
                                CTL.PC_IN   | CTL.RAM_OUT]]
 ]
 
