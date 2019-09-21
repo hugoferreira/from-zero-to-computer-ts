@@ -10,4 +10,4 @@ An 8 bit CPU implemented on top of a Digital Circuit Simulator in TypeScript. Pr
 
 Which will provide you a minimalistic visualizer like so:
 
-![Image of debugger](https://github.com/hugoferreira/from-zero-to-computer-ts/raw/master/screenshots/debugger.png)
+<img src="https://github.com/hugoferreira/from-zero-to-computer-ts/raw/master/screenshots/debugger.png" width="532" height="440">
