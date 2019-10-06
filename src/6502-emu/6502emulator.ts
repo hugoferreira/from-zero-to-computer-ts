@@ -36,10 +36,10 @@ export class MOS6502Emulator {
     STATUS = 0x00
 
     // Auxiliary 
+    IR = 0x00
     addr_abs = 0x0000
     addr_rel = 0x00
     fetched = 0x00
-    opcode = 0x00
 
     // Timing
     clock_count = 0
@@ -92,12 +92,12 @@ export class MOS6502Emulator {
 
     // Tick-tock
     clock() {
-        this.opcode = this.read(this.PC)
+        this.IR = this.read(this.PC)
         this.setFlag(FLAGS.U, true)
         this.PC += 1
 
-        this.lookup[this.opcode][2].call(this)
-        this.lookup[this.opcode][1].call(this)
+        this.lookup[this.IR][2].call(this)
+        this.lookup[this.IR][1].call(this)
 
         this.setFlag(FLAGS.U, true)
         
@@ -110,7 +110,7 @@ export class MOS6502Emulator {
     
     // Fetch
     fetch() {
-        if (!(this.lookup[this.opcode][2] === this.IMP))
+        if (!(this.lookup[this.IR][2] === this.IMP))
             this.fetched = this.read(this.addr_abs)
 
         return this.fetched
@@ -131,16 +131,12 @@ export class MOS6502Emulator {
         if (lo === 0x00FF) this.addr_abs = (this.read(addr & 0xFF00) << 8) | this.read(addr)
         else this.addr_abs = (this.read(addr + 1) << 8) | this.read(addr)
     }
-    IZX() { 
+    IZX() { this.IZ(this.X) }
+    IZY() { this.IZ(this.Y) }
+    IZ(v: number) {
         const t = this.read(this.PC++)
-        const lo = this.read((t + this.X) & 0xFF)
-        const hi = this.read((t + this.X + 1) & 0xFF)
-	    this.addr_abs = (hi << 8) | lo
-    }
-    IZY() { 
-        const t = this.read(this.PC++)
-        const lo = this.read((t + this.Y) & 0xFF)
-        const hi = this.read((t + this.Y + 1) & 0xFF)
+        const lo = this.read((t + v) & 0xFF)
+        const hi = this.read((t + v + 1) & 0xFF)
         this.addr_abs = (hi << 8) | lo
     }
     REL() { 
@@ -190,7 +186,7 @@ export class MOS6502Emulator {
 
     // Shift Instructions
     STSHIFT(v: number) {
-        if (this.lookup[this.opcode][2] === this.IMP)
+        if (this.lookup[this.IR][2] === this.IMP)
             this.A = v & 0xFF
         else this.write(this.addr_abs, v & 0xFF)
     }
