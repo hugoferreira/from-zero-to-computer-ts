@@ -1,17 +1,23 @@
 import * as c from 'colors'
-import { Bus, toHex, toBin } from './circuitsimulator'
+import { Bus, toHex, toBin } from '../circuitsimulator'
+
+const isPrintable = (keycode: number) => (keycode >= 32 && keycode < 127)
 
 export function dumpRAM(ram: Uint8Array, currentAddress: number) {
     console.log(c.green('     00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F\n'))
     for (let i = 0; i < 16; i += 1) {
-        const row = Array(...ram.subarray(i * 16, (i + 1) * 16).values())
-            .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
-            .map(s => (s === '00') ? c.dim('00') : s)
-            .map((s, j) => ((i * 16 + j) === currentAddress) ? c.underline(s) : s)
-            .map((s, j) => j === 8 ? ' ' + s : s)
-            .join(' ')
-
-        console.log(`${c.green(i.toString(16).toUpperCase().padEnd(2, '0'))}   ${row}`)
+        const vals = Array<number>(...ram.subarray(i * 16, (i + 1) * 16).values())
+        const row = vals.map(b => b.toString(16).toUpperCase().padStart(2, '0'))
+                        .map(s => (s === '00') ? c.dim('00') : s)
+                        .map((s, j) => ((i * 16 + j) === currentAddress) ? c.underline(s) : s)
+                        .map((s, j) => j === 8 ? ' ' + s : s)
+                        .join(' ')
+                        
+        const ascii = vals.map(v => isPrintable(v) ? String.fromCharCode(v) : c.dim('.'))
+                          .map((s, j) => j === 8 ? ' ' + s : s)
+                          .join('')
+                    
+        console.log(`${c.green(i.toString(16).toUpperCase().padEnd(2, '0'))}   ${row} ${ascii}`)
     }
 }
 

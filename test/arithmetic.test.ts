@@ -36,7 +36,7 @@ describe('incrementer', () => {
         fc.assert(fc.property(fc.nat(255), (x) => {
             a.set(x)
             s.do()
-            expect(toDec(inc)).eq((x + 1) % 0x100)
+            expect(toDec(inc)).eq((x + 1) & 0xFF)
         }))
     })
 
@@ -45,6 +45,20 @@ describe('incrementer', () => {
             a.set(x)
             s.do()
             expect(carry.get()).eq(x + 1 > 255)
+        }))
+    })
+})
+
+describe('decrementer', () => {
+    const s = new CircuitSimulator()
+    const a = s.bus(8)
+    const [inc, carry] = s.decrementer(a)
+
+    it('decrements 8 bit values', () => {
+        fc.assert(fc.property(fc.nat(255), (x) => {
+            a.set(x)
+            s.do()
+            expect(toDec(inc)).eq((x - 1) & 0xFF)
         }))
     })
 })

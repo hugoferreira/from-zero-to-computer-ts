@@ -1,6 +1,6 @@
 import { expect } from "chai"
 import { toDec, toBin, Bus } from '../src/circuitsimulator'
-import { SAP1, CTL } from '../src/sap-1'
+import { SAP1, CTL } from '../src/sap1/sap-1'
 
 describe('SAP-1 Computer', () => {
     it('NOP', () => {

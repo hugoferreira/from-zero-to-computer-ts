@@ -1,14 +1,16 @@
-import { CircuitSimulator, Wire, Bus, toDec } from './circuitsimulator'
+import { CircuitSimulator, Wire, Bus, toDec } from '../circuitsimulator'
 
-export class SAP1 extends CircuitSimulator {    
+export class MOS6502 extends CircuitSimulator {    
     build(clk: Wire, reset: Wire, microcode: Uint16Array, mem: Uint8Array = new Uint8Array(256)) {
         const nclk = this.inverter(clk)
         const DBUS = this.bus(8)
+        const ABUS = this.bus(8)
     
         const { out: A_DATA, we: A_IN, oe: A_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: B_DATA, we: B_IN, oe: B_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: IR_DATA, we: IR_IN, oe: IR_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: MAR_DATA, we: MAR_IN } = this.busRegister({ bus: DBUS, clk, reset })
+        const { out: SP_DATA, we: SP_IN, oe: SP_OUT } = this.busRegister({ bus: ABUS, clk, reset })
         const { out: PC_DATA, inc: PC_INC, we: PC_IN, oe: PC_OUT } = this.programCounter({ data: DBUS, clk: clk, reset })
         const { sum: ALU_DATA, oe: ALU_OUT } = this.alu({ a: A_DATA, b: B_DATA, bus: DBUS })
         const { out: RAM_DATA, we: RAM_IN, oe: RAM_OUT } = this.ioram(MAR_DATA, nclk, DBUS, mem)
@@ -19,7 +21,7 @@ export class SAP1 extends CircuitSimulator {
 
         const STEP = this.controlunit(OPCODE, clk, reset, microcode, CTRL, true)
         
-        return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OPCODE, STEP, CTRL }
+        return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, SP_DATA, ALU_DATA, RAM_DATA, OPCODE, STEP, CTRL }
     }
 
     load(mem: Uint8Array, program: Uint8Array) {
@@ -38,21 +40,6 @@ export class SAP1 extends CircuitSimulator {
     ROM(address: Bus, mem: Uint16Array, data: Bus) {
         address.onChange(() => data.set(mem[toDec(address.get())]))
     }
-
-    /*
-    fastcontrol(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false) {
-        let n = 0x0
-        const step = this.bus(3)
-        const ctrlin = new Bus(step.wires.concat(opcode))
-        clk.onPosEdge(() => {
-            step.set(n)
-            this.clockedROM(ctrlin, clk, microcode, ctrl)
-            if (reset.get() || (resetOnZero && toDec(ctrl) === 0)) n = 0x0 
-            else n = (n + 1) % 8
-        })
-
-        return step
-    } */
 
     controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false): Bus {
         const nop = this.wire()
@@ -134,7 +121,7 @@ export const microcodeTable: [Opcode, CtlLines][] = [
     /* A <- A+B  */ [0b10000, [CTL.PC_OUT  | CTL.MAR_IN, 
                                CTL.ALU_OUT | CTL.A_IN]],
 
-    /* PC <- xx  */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
+    /* B <- A    */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
                                CTL.PC_IN   | CTL.RAM_OUT]]
 ]
 

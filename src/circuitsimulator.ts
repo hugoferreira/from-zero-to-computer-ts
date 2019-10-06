@@ -260,6 +260,12 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return [outs, cout]
     }
 
+    decrementer(a: Bus, outs = a.clone()): [Bus, Wire] {
+        const decrement = a.clone()
+        decrement.set(Array(a.length).fill(true))
+        return this.fulladder(a, decrement, this.wire(), outs)
+    }
+
     fulladder(a: Bus, b: Bus, carry: Wire, outs = a.clone()): [Bus, Wire] {
         if (a.length !== b.length) throw Error("A and B must have the same length")
 

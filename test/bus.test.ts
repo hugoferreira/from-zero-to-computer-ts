@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { toDec } from '../src/circuitsimulator'
 import * as fc from 'fast-check'
-import { SAP1 } from "../src/sap-1";
+import { SAP1 } from "../src/sap1/sap-1";
 
 describe('bus and registers', () => {
     it("swap values", () => {

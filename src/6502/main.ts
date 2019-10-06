@@ -1,18 +1,19 @@
 import * as c from 'colors'
-import { toDec } from './circuitsimulator'
-import { SAP1, buildMicrocode, microcodeTable } from './sap-1'
+import { toDec } from '../circuitsimulator'
+import { MOS6502, buildMicrocode, microcodeTable } from './6502'
 import { dumpRAM, dumpRegisters } from './repl'
-import { asm, unasm, LDA, LDB, ADD, STA, JMP } from './assembler'
+import { asm, unasm, LDA, LDB, ADD, STA, JMP, REPEAT } from './assembler'
 
 const program = asm(
-    LDA(0x10),
-    LDB(0x02),
-    ADD(),
-    STA(0x1C),
-    JMP(4)
+    LDA(32),
+    LDB(1),
+    ...REPEAT(
+        ADD(),
+        STA(0x1C)
+    )
 )
 
-const s = new SAP1()
+const s = new MOS6502()
 const CLK = s.clock(1, false)
 const RESET = s.wire()
 const ram = new Uint8Array(256)
@@ -31,9 +32,9 @@ CLK.onChange(() => {
 
 setInterval(() => {
     s.posedge(CLK)
-}, 500)
+}, 100)
 
-const toHex = (...xs: number[]) => xs.map(x => `${x.toString(16).toUpperCase().padStart(2, '0')}`) 
+const toHex = (...xs: (number | string)[]) => xs.map(x => `${x.toString(16).toUpperCase().padStart(2, '0')}`) 
 
 setInterval(() => {
     console.clear()
@@ -41,5 +42,7 @@ setInterval(() => {
     console.log()
     dumpRegisters(computer)
     console.log()
-    console.log(c.green('ASM\t') + unasm(ram.slice(PC, PC + 3)).map(op => `${c.cyan(toHex(...op.code).join(' ').padEnd(7))} ${op}`)[0])
-}, 500)
+    try {
+        console.log(unasm(ram.slice(PC, PC + 2)).map(op => `${c.green('CODE')}\t${c.cyan(toHex(...op.code).join(' ').padEnd(7))}\t${c.green('ASM')}\t${op}`)[0])
+    } catch { }
+}, 100)
