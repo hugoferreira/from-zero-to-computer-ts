@@ -10,7 +10,7 @@ export function dumpRAM(ram: Uint8Array, currentAddress: number, pc: number) {
         const row = vals.map(b => toHex(b))
                         .map(s => (s === '00') ? c.dim('00') : s)
                         .map((s, j) => ((i + j) === currentAddress) ? c.underline(s) : s)
-                        .map((s, j) => ((i + j) === pc) ? c.inverse(s) : s)
+                        .map((s, j) => ((i + j) === pc) ? c.green(s) : s)
                         .map((s, j) => j === 8 ? ' ' + s : s)
                         .join(' ')
                         

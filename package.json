@@ -12,22 +12,22 @@
     },
     "devDependencies": {
         "@types/benchmark": "^1.0.31",
+        "@types/chai": "^4.2.4",
         "@types/colors": "^1.2.1",
         "@types/mocha": "^5.2.7",
-        "@types/chai": "^4.2.0",
-        "@types/node": "^12.7.9",
+        "@types/node": "^12.12.6",
         "chai": "^4.2.0",
-        "fast-check": "^1.17.0",
-        "mocha": "^6.2.1",
-        "npm": "^6.11.3",
+        "fast-check": "^1.18.1",
+        "mocha": "^6.2.2",
+        "npm": "^6.13.0",
         "ts-node": "^8.4.1",
-        "typescript": "^3.6.3"
+        "typescript": "^3.7.2"
     },
     "scripts": {
+        "6502": "npm run build; node build/6502/main.js",
         "build": "tsc",
         "test": "mocha -r ts-node/register test/**/*.test.ts",
         "sap1": "npm run build; node build/sap1/main.js",
-        "6502": "npm run build; node build/6502/main.js",
         "6502emu": "npm run build; node build/6502-emu/main.js",
         "perf": "npm run build; node build/performance.js",
         "prof": "npm run build; node --prof --cpu-profiler-sampling-interval=10 build/performance.js"

@@ -39,21 +39,6 @@ export class SAP1 extends CircuitSimulator {
         address.onChange(() => data.set(mem[toDec(address.get())]))
     }
 
-    /*
-    fastcontrol(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false) {
-        let n = 0x0
-        const step = this.bus(3)
-        const ctrlin = new Bus(step.wires.concat(opcode))
-        clk.onPosEdge(() => {
-            step.set(n)
-            this.clockedROM(ctrlin, clk, microcode, ctrl)
-            if (reset.get() || (resetOnZero && toDec(ctrl) === 0)) n = 0x0 
-            else n = (n + 1) % 8
-        })
-
-        return step
-    } */
-
     controlunit(opcode: Bus, clk: Wire, reset: Wire, microcode: Uint16Array, ctrl: Bus, resetOnZero = false): Bus {
         const nop = this.wire()
         const step = this.counter(this.bus(3), clk, this.High, this.or(reset, nop))

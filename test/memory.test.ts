@@ -1,4 +1,6 @@
-import { expect } from "chai";
+import { expect } from 'chai'
+import * as fc from 'fast-check'
+
 import { CircuitSimulator, Wire, toDec } from '../src/circuitsimulator'
 
 describe('ram', () => {
@@ -55,5 +57,30 @@ describe('rom', () => {
             abus.set(ix)
             expect(toDec(dbus)).eq(v)
         })
+    })
+})
+
+describe('eprom alu', () => {
+    it('work as expected', () => {
+        const s = new CircuitSimulator()
+        const ain = s.bus(4)
+        const bin = s.bus(4)
+        const cin = s.wire(false)
+
+        const [out, cout] = s.fourbitalu(ain, bin, cin)
+
+        s.do()
+
+        const testCase = fc.tuple(
+            fc.nat(0xF),  // a
+            fc.nat(0xF),  // b
+            fc.nat(1)     // carry                       
+        )
+
+        fc.assert(fc.property(testCase, ([a, b, c]) => {
+            ain.set(a)
+            bin.set(b)
+            expect(toDec(out) & 0xF).eq((a + b) & 0xF)
+        }))
     })
 })

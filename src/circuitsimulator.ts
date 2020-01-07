@@ -281,6 +281,28 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // ----------------------------------------------
+    // Sequential Logic (ALU)
+    // ----------------------------------------------
+
+    fourbitalu(a: Bus, b: Bus, carry: Wire): [Bus, Wire] {
+        const mem = new Array(0xF * 0xF)
+        const abus = new Bus(new Array(...a.wires, ...b.wires, carry))
+        const outs = this.bus(a.length + 1)
+
+        for (let i = 0; i < Math.pow(2, a.length); i += 1) {
+            for (let j = 0; j < Math.pow(2, b.length); j += 1) {
+                const sum = (i + j) & 0xF
+                const carry = (i + j) > 0xF ? 1 : 0
+                mem[(i << b.length) + j] = sum | carry << 5
+            }
+        }
+
+        this.rom(abus, mem, outs)
+
+        return [new Bus(outs.slice(0, 3)), outs[4]]
+    }
+
+    // ----------------------------------------------
     // Sequential Logic
     // ----------------------------------------------
 
