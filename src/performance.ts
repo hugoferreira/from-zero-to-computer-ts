@@ -1,5 +1,5 @@
 import { SAP1, buildMicrocode, microcodeTable } from './sap1/sap-1'
-import { Suite } from 'Benchmark'
+import { Suite } from 'benchmark'
 
 const program = new Uint8Array([0x01, 0x10, 0x02, 0x02, 0x10, 0x08, 0x1C, 0x1F, 0x04])
 
