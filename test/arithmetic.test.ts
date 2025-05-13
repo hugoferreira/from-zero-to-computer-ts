@@ -4,7 +4,7 @@ import * as fc from 'fast-check'
 
 describe('fulladder', () => {
     it('sums n-bit values and sets carry', () => {
-        const testCase = fc.integer(2, 16).chain(bits => fc.tuple(
+        const testCase = fc.integer({ min: 2, max: 16 }).chain(bits => fc.tuple(
             fc.nat(2 ** bits - 1),  // a
             fc.nat(2 ** bits - 1),  // b
             fc.constant(bits),              // bits

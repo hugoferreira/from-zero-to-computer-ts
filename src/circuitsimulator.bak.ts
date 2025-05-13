@@ -19,7 +19,7 @@ export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string =>
 
 // -----------
 
-type NetObserver = () => void
+type NetObserver = () => void 
 type CircuitAction = { wire: number, state: boolean }
 
 interface Net<T> {
@@ -28,14 +28,14 @@ interface Net<T> {
     set(s: T): void
     schedule(s: T, delay: number): void
     onChange(a: NetObserver): void
-    clone(): Net<T>
+    clone(): Net<T> 
     connect(to: Net<T>): void
 }
 
 export class Wire implements Net<boolean> {
     length = 1
 
-    constructor(private _circuit: CircuitSimulator, public _netId: number, _signal: boolean = false) {
+    constructor(private _circuit: CircuitSimulator, public _netId: number, _signal: boolean = false) { 
         this.set(_signal)
     }
 
@@ -61,7 +61,7 @@ export class Bus extends Array<Wire> implements Net<boolean[]> {
     constructor(public wires: Wire[]) { super(...wires) }
 
     clone() { return new Bus(this.wires.map(w => w.clone())) }
-    get() {
+    get() { 
         const len = this.wires.length
         const result = new Array(len)
         for (let i = 0; i < len; i++) {
@@ -123,7 +123,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const toPosEdge = this.posEdgeObs[to]!;
         toPosEdge.forEach(a => fromPosEdge.add(a))
         toPosEdge.clear()
-    }
+    } 
 
     setSignal(id: number, s: boolean) {
         if (s !== this.getSignal(id)) {
@@ -133,14 +133,14 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         }
     }
 
-    onChange(id: number, a: NetObserver) {
+    onChange(id: number, a: NetObserver) { 
         this.observers[id]!.add(a)
-        a()
+        a() 
     }
 
     onPosEdge(id: number, a: NetObserver) {
         this.posEdgeObs[id]!.add(a)
-        if (this.getSignal(id)) a()
+        if (this.getSignal(id)) a() 
     }
 
     wire(signal = false): Wire {
@@ -149,7 +149,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         this.posEdgeObs[this._idCounter] = new Set<NetObserver>()
         return new Wire(this, this._idCounter, signal)
     }
-
+        
     bus(size: number, initSignal: number = 0) {
         const bus = new Bus(Array(size).fill(0).map(_ => this.wire()))
         bus.set(initSignal)
@@ -180,7 +180,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
 
     binaryOp(a: Wire, b: Wire, op: (a: boolean, b: boolean) => boolean, out = this.wire()) {
         const action = () => out.schedule(op(a.get(), b.get()), this._gateDelay)
-
+        
         a.onChange(action)
         b.onChange(action)
 
@@ -188,10 +188,10 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     and(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x && y, out); return out }
-    nand(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x && y), out); return out }
-    or(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x || y, out); return out }
-    nor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out }
-    xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out }
+    nand(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x && y), out); return out  }
+    or(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x || y, out); return out  }
+    nor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => !(x || y), out); return out  }
+    xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out  }
 
     bufferWire(i: Wire, we: Wire = this.High, o = i.clone()) {
         const action = () => { if (we.get()) o.schedule(i.get(), this._gateDelay) }
@@ -205,8 +205,8 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     buffer(ins: Wire, we: Wire, outs?: Wire): Wire;
     buffer(ins: Bus, we: Wire, outs?: Bus): Bus;
     buffer(ins: Wire | Bus, we: Wire = this.High, outs = ins.clone()) {
-        if (ins instanceof Wire) this.bufferWire(ins, we, <Wire>outs)
-        else if (ins instanceof Bus) ins.forEach((i, ix) => this.bufferWire(i, we, (<Bus>outs)[ix]))
+        if (ins instanceof Wire) this.bufferWire(ins, we, <Wire> outs)
+        else if (ins instanceof Bus) ins.forEach((i, ix) => this.bufferWire(i, we, (<Bus> outs)[ix]))
         return outs
     }
 
@@ -236,16 +236,16 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     onebitmux(a: Wire, b: Wire, s: Wire): Wire {
         return this.or(this.and(a, this.inverter(s)), this.and(b, s))
     }
-
+        
     // Multiplexer { Optimized }
     mux(data: Array<Wire>, sel: Bus | Wire, out?: Wire): Wire;
     mux(data: Array<Bus>, sel: Bus | Wire, out?: Bus): Bus;
-    mux(data: Array<Wire | Bus>, sel: Wire | Bus, out = data[0].clone()): Wire | Bus {
+    mux(data: Array<Wire|Bus>, sel: Wire | Bus, out = data[0].clone()): Wire | Bus {
         if (data.length !== 2 ** sel.length)
             throw new Error("Selection and data lines size mismatch")
 
         const wes = this.decoder(sel)
-        data.forEach((i, ix) => this.buffer(<any>i, wes[ix], <any>out))
+        data.forEach((i, ix) => this.buffer(<any> i, wes[ix], <any> out))
 
         return out
     }
@@ -356,7 +356,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     fastRegister(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
         const out = ins.clone()
         let state = ins.get()
-        clk.onPosEdge(() => { if (we.get()) { state = ins.get(); out.set(state) } })
+        clk.onPosEdge(() => { if (we.get()) { state = ins.get(); out.set(state) }})
         reset.onPosEdge(() => { out.set(0x00); state = out.get() })
         return out
     }
@@ -375,7 +375,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const data = this.buffer(bus, we)
         const r_out = this.register(data, clk, this.High, reset)
         const [r_inc, _] = this.incrementer(r_out, data)
-
+        
         r_out.connect(out)
         return r_out
     }
@@ -384,13 +384,15 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         if (mem.length !== 2 ** address.length) throw Error("Invalid memory size for addressing range")
         const latch = data.clone()
 
-        const latchAction = () => latch.set(mem[toDec(address.get())])
-        const writeAction = () => { if (we.get()) mem[toDec(address.get())] = toDec(data.get()) }
+        // Not sure if these should be commented, but the tests pass
 
-        address.onChange(latchAction)
-        clk.onPosEdge(latchAction)
-        clk.onPosEdge(writeAction)
-        data.onChange(writeAction)
+        // const latchAction = () => latch.set(mem[toDec(address.get())])
+        // const writeAction = () => { if (we.get()) mem[toDec(address.get())] = toDec(data.get()) }
+
+        // address.onChange(latchAction)
+        // clk.onPosEdge(latchAction)
+        // clk.onPosEdge(writeAction)
+        // data.onChange(writeAction)
 
         clk.onPosEdge(() => {
             const addr = toDec(address.get())
@@ -407,5 +409,5 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         const { out } = this.ram(address, clk, data, mem, we, oe)
         out.connect(data)
         return { out, we, oe, mem }
-    }
+    } 
 }

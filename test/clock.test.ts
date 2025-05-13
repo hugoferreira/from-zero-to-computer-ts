@@ -12,7 +12,7 @@ describe('clock', () => {
     })
 
     it('posedge', () => {
-        fc.assert(fc.property(fc.integer(1, 16), (f) => {
+        fc.assert(fc.property(fc.integer({ min: 1, max: 16 }), (f) => {
             const s = new CircuitSimulator()
             const clk = s.clock(f, false)
 
@@ -22,7 +22,7 @@ describe('clock', () => {
     })
 
     it('negedge', () => {
-        fc.assert(fc.property(fc.integer(1, 16), (f) => {
+        fc.assert(fc.property(fc.integer({ min: 1, max: 16 }), (f) => {
             const s = new CircuitSimulator()
             const clk = s.clock(f, false)
 

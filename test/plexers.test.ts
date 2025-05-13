@@ -4,7 +4,7 @@ import * as fc from 'fast-check'
 
 describe('decoder', () => {
     it('select correct line', () => {
-        const testCase = fc.integer(1, 8).chain((bits) => fc.tuple(
+        const testCase = fc.integer({ min: 1, max: 8 }).chain((bits) => fc.tuple(
             fc.nat(2 ** bits - 1),  // a random value between 0 and (2^bits)-1
             fc.constant(bits)       // the number of bits to decode
         ))
@@ -43,8 +43,8 @@ describe('decoder', () => {
 
 describe('multiplexer', () => {
     it('select correct line', () => {
-        const testCase = fc.integer(1, 4).chain((bits) => fc.tuple(
-            fc.array(fc.nat(255), 2 ** bits, 2 ** bits), // data lines of 8 bits
+        const testCase = fc.integer({ min: 1, max: 4 }).chain((bits) => fc.tuple(
+            fc.array(fc.nat(255), { minLength: 2 ** bits, maxLength: 2 ** bits }), // data lines of 8 bits
             fc.nat(2 ** bits - 1),  // An arbitrary selection
             fc.constant(bits)       // the number of selection bits
         ))

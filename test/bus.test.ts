@@ -5,10 +5,10 @@ import { SAP1 } from "../src/sap1/sap-1";
 
 describe('bus and registers', () => {
     it("swap values", () => {
-        const testCase = fc.integer(2, 32).chain(nRegisters => fc.tuple(
+        const testCase = fc.integer({ min: 2, max: 32 }).chain(nRegisters => fc.tuple(
             fc.constant(nRegisters),
-            fc.array(fc.nat(0xFF), nRegisters, nRegisters),   // initial values
-            fc.array(fc.set(fc.nat(nRegisters - 1), 2, 2))
+            fc.array(fc.nat(0xFF), { minLength: nRegisters, maxLength: nRegisters }),   // initial values
+            fc.array(fc.uniqueArray(fc.nat(nRegisters - 1), { minLength: 2, maxLength: 2 }))
         ))
 
         fc.assert(fc.property(testCase, ([nRegisters, initValues, swaps]) => {
@@ -43,7 +43,7 @@ describe('bus and registers', () => {
                 regs[we].we.off()
                 regs[oe].oe.off()
             })
-        }), { seed: -701609666, path: "5:0:2:1:2:3:2:2", endOnFailure: true })
+        }), { seed: -701609666, endOnFailure: true })
     })
 
     it("initialization", () => {
@@ -80,6 +80,6 @@ describe('bus and registers', () => {
                 reg.oe.off()
                 s.posedge(clk)
             })
-        }), { seed: -956589129, path: "14:3:1:1:1:1:1:1:1:2", endOnFailure: true })
+        }), { seed: -956589129, endOnFailure: true })
     })
 })
