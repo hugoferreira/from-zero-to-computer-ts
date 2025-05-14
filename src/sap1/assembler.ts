@@ -18,6 +18,9 @@ export const LDA = (imm: number | string): Op => ({ toString: () => `LDA #${imm}
 export const STA = (addr: number): Op => ({ toString: () => `STA #${addr}`, code: [0b01000, addr] })
 export const LDB = (imm: number | string): Op => ({ toString: () => `LDB #${imm}`, code: [0b00010, imm] })
 export const ADD = (): Op => ({ toString: () => `ADD`, code: [0b10000] })
+export const SUB = (): Op => ({ toString: () => `SUB`, code: [0b10001] })
+export const OUT = (): Op => ({ toString: () => `OUT`, code: [0b10010] })
+export const HLT = (): Op => ({ toString: () => `HLT`, code: [0b11110] })
 export const JMP = (addr: number | string): Op => ({ toString: () => `JMP ${addr}`, code: [0b11111, addr] })
 export const DATA = (byte: number): Op => ({ toString: () => `DAT ${byte}`, code: [byte] })
 export const LABEL = (id: string): Label => ({ id })
@@ -28,6 +31,9 @@ const table = [
     { code: 0b01000, length: 2, ctor: (bytes: Uint8Array) => STA(bytes[0]) },
     { code: 0b00010, length: 2, ctor: (bytes: Uint8Array) => LDB(bytes[0]) },
     { code: 0b10000, length: 1, ctor: ()                  => ADD() },
+    { code: 0b10001, length: 1, ctor: ()                  => SUB() },
+    { code: 0b10010, length: 1, ctor: ()                  => OUT() },
+    { code: 0b11110, length: 1, ctor: ()                  => HLT() },
     { code: 0b11111, length: 2, ctor: (bytes: Uint8Array) => JMP(bytes[0]) },
 ]
 

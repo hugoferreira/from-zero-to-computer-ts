@@ -10,16 +10,25 @@ export class SAP1 extends CircuitSimulator {
         const { out: IR_DATA, we: IR_IN, oe: IR_OUT } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: MAR_DATA, we: MAR_IN } = this.busRegister({ bus: DBUS, clk, reset })
         const { out: PC_DATA, inc: PC_INC, we: PC_IN, oe: PC_OUT } = this.programCounter({ data: DBUS, clk: clk, reset })
-        const { sum: ALU_DATA, oe: ALU_OUT } = this.alu({ a: A_DATA, b: B_DATA, bus: DBUS })
+        const { sum: ALU_DATA, oe: ALU_OUT, sub: SUB_OUT } = this.alu({ a: A_DATA, b: B_DATA, bus: DBUS })
         const { out: RAM_DATA, we: RAM_IN, oe: RAM_OUT } = this.ioram(MAR_DATA, nclk, DBUS, mem)
+        
+        // Output register
+        const { out: OUT_DATA, we: OUT_IN } = this.busRegister({ bus: DBUS, clk, reset })
+        
+        // Halt signal
+        const HALT = this.wire(false)
 
         const OPCODE = new Bus(IR_DATA.slice(0, 5))
         const CTRL = new Bus([A_IN, A_OUT, B_IN, B_OUT, IR_IN, IR_OUT, PC_INC, PC_IN, PC_OUT, 
-                              MAR_IN, RAM_IN, RAM_OUT, ALU_OUT, this.Low, this.Low, this.Low].reverse())
+                              MAR_IN, RAM_IN, RAM_OUT, ALU_OUT, SUB_OUT, OUT_IN, HALT].reverse())
 
         const STEP = this.controlunit(OPCODE, clk, reset, microcode, CTRL, true)
         
-        return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OPCODE, STEP, CTRL }
+        // Wire HALT signal to stop the clock
+        const clockGate = this.and(clk, this.inverter(HALT))
+        
+        return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OUT_DATA, OPCODE, STEP, CTRL, HALT, clockGate }
     }
 
     load(mem: Uint8Array, program: Uint8Array) {
@@ -64,10 +73,26 @@ export class SAP1 extends CircuitSimulator {
         return { out, we, oe }
     }
 
-    alu({ a, b, bus: out = a.clone(), oe = this.wire() }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sum?: Bus }) {
-        const [sum, carry_out] = this.fulladder(a, b, this.Low)
-        this.buffer(sum, oe, out)
-        return { a, b, out, sum, oe }
+    alu({ a, b, bus: out = a.clone(), oe = this.wire(), sub = this.wire() }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sub?: Wire, sum?: Bus }) {
+        // Regular addition 
+        const [sum, carry_add] = this.fulladder(a, b, this.Low)
+        
+        // For subtraction: invert b and add 1 (two's complement)
+        const b_inverted = b.clone()
+        b_inverted.wires.forEach((w, i) => {
+            this.inverter(b.wires[i]).connect(w)
+        })
+        const [diff, carry_sub] = this.fulladder(a, b_inverted, this.High)  // Add 1 by setting carry in to High
+        
+        // Create a multiplexer to select between addition and subtraction
+        const result = this.bus(a.length)
+        a.wires.forEach((_, i) => {
+            this.onebitmux(sum.wires[i], diff.wires[i], sub).connect(result.wires[i])
+        })
+        
+        this.buffer(result, oe, out)
+        
+        return { a, b, out, sum: result, oe, sub }
     }
 }
 
@@ -84,7 +109,10 @@ export enum CTL {
     MAR_IN  = 1 << 6, 
     RAM_IN  = 1 << 5, 
     RAM_OUT = 1 << 4, 
-    ALU_OUT = 1 << 3
+    ALU_OUT = 1 << 3,
+    SUB_OUT = 1 << 2,
+    OUT_IN  = 1 << 1,
+    HALT    = 1 << 0
 }
 
 type Opcode = number
@@ -116,8 +144,13 @@ export const microcodeTable: [Opcode, CtlLines][] = [
                                CTL.MAR_IN  | CTL.RAM_OUT, 
                                CTL.B_IN    | CTL.PC_INC | CTL.RAM_OUT]],
 
-    /* A <- A+B  */ [0b10000, [CTL.PC_OUT  | CTL.MAR_IN, 
-                               CTL.ALU_OUT | CTL.A_IN]],
+    /* A <- A+B  */ [0b10000, [CTL.ALU_OUT | CTL.A_IN]],
+    
+    /* A <- A-B  */ [0b10001, [CTL.ALU_OUT | CTL.SUB_OUT | CTL.A_IN]],
+    
+    /* OUT <- A  */ [0b10010, [CTL.A_OUT   | CTL.OUT_IN]],
+    
+    /* HALT      */ [0b11110, [CTL.HALT]],
 
     /* PC <- xx  */ [0b11111, [CTL.PC_OUT  | CTL.MAR_IN, 
                                CTL.PC_IN   | CTL.RAM_OUT]]
