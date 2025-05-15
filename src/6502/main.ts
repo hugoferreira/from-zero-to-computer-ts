@@ -24,7 +24,7 @@ const { MAR_DATA, STEP, PC_DATA } = computer
 let PC = toDec(PC_DATA)
 
 s.load(ram, program)
-s.do()
+s.forward()
 
 CLK.onChange(() => {
     if (toDec(STEP) === 0) PC = toDec(PC_DATA)

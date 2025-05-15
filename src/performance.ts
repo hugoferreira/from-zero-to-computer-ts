@@ -10,7 +10,7 @@ const ram = new Uint8Array(256)
 
 s.build(CLK, RESET, buildMicrocode(microcodeTable), ram)
 s.load(ram, program)
-s.do()
+s.forward()
 
 console.log(`NetList size is ${s.netList.length}`)
 

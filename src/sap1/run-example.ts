@@ -31,7 +31,7 @@ const runProgram = (program: Uint8Array, maxCycles = 100) => {
     let halted = false;
     
     // Advance the simulation a bit to initialize
-    s.do();
+    s.forward();
     
     while (cycles < maxCycles && !halted) {
         // Get current state before advancing

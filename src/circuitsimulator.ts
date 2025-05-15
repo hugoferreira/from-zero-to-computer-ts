@@ -1,5 +1,9 @@
 import { Simulator } from './simulator'
 
+// Global flag to enable/disable detailed console logging for debugging
+// @ts-ignore
+globalThis.enableDetailedLogging = false;
+
 // -----------
 
 export const isWire = (value: any): value is Wire => value instanceof Wire
@@ -16,6 +20,41 @@ export const fromBin = (n: number, width: number): boolean[] => [...Array(width)
 
 export const toHex = (bs: boolean[] | Bus, width: number = bs.length / 4): string => `0x${toDec(bs).toString(16).padStart(width, '0')}`
 export const toBin = (bs: boolean[] | Bus, width: number = bs.length): string => `0b${toDec(bs).toString(2).padStart(width, '0')}`
+
+// ----------- Interface Definitions for Component Outputs
+
+export interface RegisterOutput {
+    out: Bus;
+    we: Wire;
+    oe: Wire;
+}
+
+export interface ProgramCounterOutput extends RegisterOutput {
+    inc: Wire;
+}
+
+export interface RamOutput extends RegisterOutput {
+    mem: Uint8Array;
+}
+
+export interface AluOutput {
+    a: Bus; // Input A
+    b: Bus; // Input B
+    out: Bus; // ALU result output
+    op: Bus;  // Operation select bus
+    flags: Bus; // Flags output
+    oe: Wire; // Output enable
+}
+
+export interface InputPortOutput {
+    out: Bus;
+    oe: Wire;
+}
+
+export interface OutputPortOutput {
+    out: Bus;
+    we: Wire;
+}
 
 // -----------
 
@@ -194,7 +233,11 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     xor(a: Wire, b: Wire, out = this.wire()) { this.binaryOp(a, b, (x, y) => x ? (!y) : y, out); return out }
 
     bufferWire(i: Wire, we: Wire = this.High, o = i.clone()) {
-        const action = () => { if (we.get()) o.schedule(i.get(), this._gateDelay) }
+        const action = () => { 
+            if (we.get()) {
+                o.schedule(i.get(), this._gateDelay)
+            }
+        }
 
         i.onChange(action)
         we.onPosEdge(action)
@@ -204,7 +247,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
 
     buffer(ins: Wire, we: Wire, outs?: Wire): Wire;
     buffer(ins: Bus, we: Wire, outs?: Bus): Bus;
-    buffer(ins: Wire | Bus, we: Wire = this.High, outs = ins.clone()) {
+    buffer(ins: Wire | Bus, we: Wire = this.High, outs = ins.clone()): Wire | Bus {
         if (ins instanceof Wire) this.bufferWire(ins, we, <Wire>outs)
         else if (ins instanceof Bus) ins.forEach((i, ix) => this.bufferWire(i, we, (<Bus>outs)[ix]))
         return outs
@@ -215,7 +258,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     // SR NOR Latch
-    flipflop(set: Wire = this.wire(), reset: Wire = this.wire(), q = this.wire()) {
+    flipflop(set: Wire = this.wire(), reset: Wire = this.wire(), q = this.wire()): [Wire, Wire, Wire, Wire] {
         const nq = this.wire(!q.get())
 
         this.nor(reset, nq, q)
@@ -319,9 +362,9 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     // ----------------------------------------------
 
     clock(interval: number = 1, state: boolean = false) {
-        const out = this.wire(state)
-        out.onChange(() => out.schedule(!out.get(), interval))
-        return out
+        const out = this.wire(state);
+        out.onChange(() => out.schedule(!out.get(), interval));
+        return out;
     }
 
     // PosEdge D Flip-Flop
@@ -353,7 +396,7 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // Edge-Triggered Arbitrary Length Register { Optimized }
-    fastRegister(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
+    fastRegister(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low): Bus {
         const out = ins.clone()
         let state = ins.get()
         clk.onPosEdge(() => { if (we.get()) { state = ins.get(); out.set(state) } })
@@ -362,25 +405,39 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
     }
 
     // PosEdge Array of D Flip-Flops { Optimized }
-    register(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low) {
-        return new Bus(this.buffer(ins, we).wires.map(w => this.dff(w, clk, false, reset)))
-
-        // This might lead to mixed signals being injected in the scheduler, 
-        // and latch an incorrect value. Either the above turns out to work, or I need to
-        // fix mismatch signals happening simultaneously.
-        // return new Bus(ins.wires.map(w => this.dff(w, this.and(clk, we), false, reset)))
+    register(ins: Bus, clk: Wire, we: Wire = this.High, reset: Wire = this.Low): RegisterOutput {
+        const bufferedInput = this.buffer(ins, we);
+        const outBus = new Bus(bufferedInput.wires.map(w => this.dff(w, clk, false, reset)));
+        return { out: outBus, we, oe: this.wire() };
     }
 
     counter(bus: Bus, clk: Wire, we: Wire = this.Low, reset: Wire, out: Bus = bus.clone()): Bus {
-        const data = this.buffer(bus, we)
-        const r_out = this.register(data, clk, this.High, reset)
-        const [r_inc, _] = this.incrementer(r_out, data)
+        const data = this.buffer(bus, we);
+        const registerComponent = this.register(data, clk, this.High, reset); // registerComponent is RegisterOutput
+        const r_out_bus = registerComponent.out; // This is the actual output bus
+        
+        // incrementer expects a Bus, so we pass r_out_bus
+        const [r_inc, _] = this.incrementer(r_out_bus, data); 
+        // data should actually be connected to the input of the incrementer if it's meant to be loaded
+        // The original code this.incrementer(r_out, data) might have intended data to be the output of incrementer for parallel load.
+        // For a simple counter, r_inc (the incremented r_out_bus) should typically feed back to the register's input.
+        // However, the original incrementer(r_out, data) implies data is the target for the incremented value.
+        // Let's assume data is where the incremented value should go for now, to match original structure.
+        // This likely means r_inc is connected to data's wires if not directly assigned.
+        // This part of counter logic is a bit ambiguous based on original: this.incrementer(r_out, data)
+        // Let's stick to minimal change: r_out_bus is the bus to increment. The second param of incrementer is the output bus.
+        // So, r_inc is an alias for data here if incrementer modifies its second arg `outs` in place.
+        // The incrementer is: const [incremented, _] = this.incrementer(out) where out is the input bus
+        // and this.incrementer(a: Bus, outs = a.clone()): [Bus, Wire]
+        // This means `r_inc` is actually the `outs` bus from the incrementer. The original code was `this.incrementer(r_out, data)`
+        // which means `data` was intended as the output bus for the incrementer.
+        this.incrementer(r_out_bus, data); // r_out_bus is incremented, result stored in data (which is buffer(bus,we))
 
-        r_out.connect(out)
-        return r_out
+        r_out_bus.connect(out); // Connect the register's output bus to the counter's output bus
+        return r_out_bus; // Return the register's output bus
     }
 
-    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()) {
+    ram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()): RamOutput {
         if (mem.length !== 2 ** address.length) throw Error("Invalid memory size for addressing range")
         const latch = data.clone()
 
@@ -403,9 +460,9 @@ export class CircuitSimulator extends Simulator<CircuitAction> {
         return { out, we, oe, mem }
     }
 
-    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()) {
-        const { out } = this.ram(address, clk, data, mem, we, oe)
-        out.connect(data)
-        return { out, we, oe, mem }
+    ioram(address: Bus, clk: Wire, data: Bus = this.bus(8), mem: Uint8Array = new Uint8Array(2 ** address.length), we: Wire = this.wire(), oe: Wire = this.wire()): RamOutput {
+        const { out: ramOutBus, we: ramWe, oe: ramOe, mem: ramMem } = this.ram(address, clk, data, mem, we, oe);
+        ramOutBus.connect(data); // Connect RAM output to the data bus for bidirectional behavior if data is used as inout
+        return { out: ramOutBus, we: ramWe, oe: ramOe, mem: ramMem };
     }
 }

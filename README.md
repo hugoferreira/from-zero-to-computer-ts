@@ -22,7 +22,7 @@ Which will provide you a minimalistic visualizer like so:
     - [x] ... a functional clone of a 70's era CPU (6502)
     - [ ] ... a logic-gate equivalent of a 70's era CPU (6502)
     - [ ] ... a superset of the above CPU 
- - [x] Implement a ~~basic compiler for that computer in Scala~~ assembler that supports macros;
+ - [x] Implement an assembler that supports macros;
  - [ ] Implement a basic operating system to run on that computer;
  - [ ] Implement an application for that OS that acts as a monitor, akin to what the Apple II had;
  - [ ] Proceed to bootstrap that assembler (i.e., make the monitor be able to assemble stuff during runtime);

@@ -1,7 +1,30 @@
-import { CircuitSimulator, Wire, Bus, toDec } from '../circuitsimulator'
+import { CircuitSimulator, Wire, Bus, toDec, RegisterOutput, AluOutput as BaseAluOutput, RamOutput } from '../circuitsimulator'
+
+export interface SAP1BuildOutput {
+    DBUS: Bus;
+    A_DATA: Bus;
+    B_DATA: Bus;
+    IR_DATA: Bus;
+    MAR_DATA: Bus;
+    PC_DATA: Bus;
+    ALU_DATA: Bus;
+    RAM_DATA: Bus;
+    OUT_DATA: Bus;
+    OPCODE: Bus;
+    STEP: Bus;
+    CTRL: Bus;
+    HALT: Wire;
+    clockGate: Wire;
+}
+
+// Specific ALU output for SAP1 if it differs, or use a more generic one if applicable
+export interface SAP1AluOutput extends BaseAluOutput {
+    sub: Wire; // SAP-1 ALU has a dedicated subtract control/output line in its return
+    sum: Bus; // SAP-1 ALU returns sum explicitly
+}
 
 export class SAP1 extends CircuitSimulator {    
-    build(clk: Wire, reset: Wire, microcode: Uint16Array, mem: Uint8Array = new Uint8Array(256)) {
+    build(clk: Wire, reset: Wire, microcode: Uint16Array, mem: Uint8Array = new Uint8Array(256)): SAP1BuildOutput {
         const nclk = this.inverter(clk)
         const DBUS = this.bus(8)
     
@@ -31,7 +54,7 @@ export class SAP1 extends CircuitSimulator {
         return { DBUS, A_DATA, B_DATA, IR_DATA, MAR_DATA, PC_DATA, ALU_DATA, RAM_DATA, OUT_DATA, OPCODE, STEP, CTRL, HALT, clockGate }
     }
 
-    load(mem: Uint8Array, program: Uint8Array) {
+    load(mem: Uint8Array, program: Uint8Array): void {
         program.forEach((v, ix) => mem[ix] = v)
     }
 
@@ -40,11 +63,11 @@ export class SAP1 extends CircuitSimulator {
         return out
     } 
 
-    clockedROM(address: Bus, clk: Wire, mem: Uint16Array, data: Bus) {
+    clockedROM(address: Bus, clk: Wire, mem: Uint16Array, data: Bus): void {
         clk.onPosEdge(() => data.set(mem[toDec(address.get())]))
     }
 
-    ROM(address: Bus, mem: Uint16Array, data: Bus) {
+    ROM(address: Bus, mem: Uint16Array, data: Bus): void {
         address.onChange(() => data.set(mem[toDec(address.get())]))
     }
 
@@ -59,21 +82,21 @@ export class SAP1 extends CircuitSimulator {
         return step
     }
 
-    programCounter({ data, clk, reset, inc = this.wire(), we = this.wire(), oe = this.wire(), out = data.clone() }: { data: Bus; clk: Wire; reset: Wire; inc?: Wire; we?: Wire; oe?: Wire; out?: Bus; }) {
+    programCounter({ data, clk, reset, inc = this.wire(), we = this.wire(), oe = this.wire(), out = data.clone() }: { data: Bus; clk: Wire; reset: Wire; inc?: Wire; we?: Wire; oe?: Wire; out?: Bus; }): { out: Bus; inc: Wire; we: Wire; oe: Wire; } {
         const [incremented, _] = this.incrementer(out)
-        this.register(this.mux([this.buffer(incremented, inc), data], we), clk, this.or(we, inc), reset).connect(out) 
+        this.register(this.mux([this.buffer(incremented, inc), data], we), clk, this.or(we, inc), reset).out.connect(out) 
         this.buffer(out, oe, data)
 
         return { out, inc, we, oe }
     }
     
-    busRegister({ bus, clk, reset = this.wire(), we = this.wire(), oe = this.wire() }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }) {
+    busRegister({ bus, clk, reset = this.wire(), we = this.wire(), oe = this.wire() }: { bus: Bus; clk: Wire; reset?: Wire; we?: Wire; oe?: Wire; }): RegisterOutput {
         const out = this.fastRegister(bus, clk, we, reset)
         this.buffer(out, oe, bus)
         return { out, we, oe }
     }
 
-    alu({ a, b, bus: out = a.clone(), oe = this.wire(), sub = this.wire() }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sub?: Wire, sum?: Bus }) {
+    alu({ a, b, bus: out = a.clone(), oe = this.wire(), sub = this.wire() }: { a: Bus; b: Bus; bus?: Bus; oe?: Wire, sub?: Wire, sum?: Bus }): SAP1AluOutput {
         // Regular addition 
         const [sum, carry_add] = this.fulladder(a, b, this.Low)
         
@@ -92,7 +115,7 @@ export class SAP1 extends CircuitSimulator {
         
         this.buffer(result, oe, out)
         
-        return { a, b, out, sum: result, oe, sub }
+        return { a, b, out, sum: result, oe, sub, op: this.bus(0), flags: this.bus(0) }
     }
 }
 
@@ -156,7 +179,7 @@ export const microcodeTable: [Opcode, CtlLines][] = [
                                CTL.PC_IN   | CTL.RAM_OUT]]
 ]
 
-export function buildMicrocode(table: [Opcode, CtlLines][]) {
+export function buildMicrocode(table: [Opcode, CtlLines][]): Uint16Array {
     const steps = 8
     const microcode = new Uint16Array(0b100000 * steps)
     const fetchSteps = [CTL.PC_OUT | CTL.MAR_IN, CTL.IR_IN | CTL.PC_INC | CTL.RAM_OUT]
