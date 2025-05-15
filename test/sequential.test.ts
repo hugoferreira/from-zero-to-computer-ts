@@ -8,7 +8,7 @@ describe('counters', () => {
         const counter = s.counter(s.bus(2), clk, s.Low, s.Low)
         const threebitcycle = [1, 2, 3, 0, 1, 2, 3, 0]
 
-        s.do()
+        s.forward()
         expect(toDec(counter)).eq(0)
 
         threebitcycle.forEach((c, ix) => {
@@ -57,7 +57,7 @@ describe('counters', () => {
         expect(toDec(counter)).eq(0x3)
 
         reset.on()
-        s.do()
+        s.forward()
         
         expect(toDec(counter)).eq(0x0)
         expect(s.tick).eq(lastClock)

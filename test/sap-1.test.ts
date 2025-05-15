@@ -20,16 +20,16 @@ describe('SAP-1 Computer', () => {
         s.load(ram, program)
 
         // Advance the simulation a couple of times to properly initialize
-        for(let i = 0; i < 2; i++) {
-            s.do();
-        }
+        // for(let i = 0; i < 2; i++) {
+        //     s.forward();
+        // }
 
         // Run the simulation for a few clock cycles
         for(let i = 0; i < 12; i +=1) {
             const step = toDec(STEP)
             const ctrl = toDec(CTRL)
             const pc = toDec(PC_DATA)
-            console.log(`Step: ${step}, PC: ${pc}, Control: ${ctrl.toString(2).padStart(16, '0')}`)
+            // console.log(`Step: ${step}, PC: ${pc}, Control: ${ctrl.toString(2).padStart(16, '0')}`)
 
             // Each instruction consists of 3 microcode steps:
             // - Steps 0-1: Fetch cycle (same for all instructions)

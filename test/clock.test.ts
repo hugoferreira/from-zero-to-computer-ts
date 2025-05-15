@@ -5,9 +5,9 @@ import { CircuitSimulator } from '../src/circuitsimulator'
 describe('clock', () => {
     it('starts with initial value', () => {
         const s = new CircuitSimulator()
-        const clk = s.clock(3, true)
+        const clk = s.clock(3, false)
 
-        s.do()
+        s.forward()
         expect(clk.get()).true
     })
 

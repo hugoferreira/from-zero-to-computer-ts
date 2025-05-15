@@ -15,7 +15,7 @@ describe('decoder', () => {
             const dec = s.decoder(bus)
 
             bus.set(v)
-            s.do()
+            s.forward()
 
             // [FIXME] Javascript doesn't has precision to represent this as it should:
             // expect(toDec(dec)).eq(1 << v)
@@ -32,11 +32,11 @@ describe('decoder', () => {
 
         expect(out.length).eq(2)
 
-        s.do()
+        s.forward()
         expect(toDec(out.get())).eq(0b01)
 
         data.on()
-        s.do()
+        s.forward()
         expect(toDec(out.get())).eq(0b10)
     })
 })
@@ -55,11 +55,11 @@ describe('multiplexer', () => {
             const sel = s.bus(selBits, 0)
             const mux = s.mux(data, sel)
 
-            s.do()
+            s.forward()
             expect(toDec(mux.get())).eq(dataSignals[0])
 
             sel.set(selSignal)
-            s.do()
+            s.forward()
             expect(toDec(mux.get())).eq(dataSignals[selSignal])
         }))
     })
@@ -74,7 +74,7 @@ describe('multiplexer', () => {
 
         sel.off()
 
-        s.do()
+        s.forward()
         expect(a.get()).false
         expect(b.get()).false
         expect(out.get()).false
@@ -83,19 +83,19 @@ describe('multiplexer', () => {
         a.off()
         b.on()
 
-        s.do()
+        s.forward()
         expect(a.get()).false
         expect(b.get()).true
         expect(out.get()).true
 
         sel.off()
-        s.do()
+        s.forward()
         expect(a.get()).false
         expect(b.get()).true
         expect(out.get()).false
 
         a.on()
-        s.do()
+        s.forward()
         expect(a.get()).true
         expect(b.get()).true
         expect(out.get()).true

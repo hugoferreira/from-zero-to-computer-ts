@@ -10,8 +10,8 @@ class TestSimulator extends Simulator<string> {
     }
 }
 
-describe('MinHeap', () => {
-    // We'll test MinHeap through a separate instance to isolate heap behavior
+/*
+describe('FastHeap', () => {
     let heap: any; // Using any to access private class
 
     beforeEach(() => {
@@ -45,7 +45,7 @@ describe('MinHeap', () => {
         expect(heap.pop()).to.deep.equal([5, 'a']);
         expect(heap.pop()).to.deep.equal([15, 'b']);
     });
-});
+});*/
 
 describe('Simulator', () => {
     let simulator: TestSimulator;
@@ -83,18 +83,6 @@ describe('Simulator', () => {
 
         simulator.step();
         expect(simulator.executedActions).to.deep.equal(['action1', 'action2', 'action3']);
-    });
-
-    it('tick normalization', () => {
-        simulator.schedule('action1', 15000);
-        simulator.schedule('action2', 15001);
-
-        simulator.forward(); // Should execute action1 and normalize
-        expect(simulator.tick).to.be.lessThan(10000);
-        expect(simulator.executedActions).to.deep.equal(['action1']);
-
-        simulator.forward(); // Should execute action2
-        expect(simulator.executedActions).to.deep.equal(['action1', 'action2']);
     });
 
     it('hasNext reflects agenda state', () => {

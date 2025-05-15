@@ -9,7 +9,7 @@ describe('buffer', () => {
         const B = s.wire(false)
 
         s.buffer(A, s.High, B)
-        s.do()
+        s.forward()
         expect(A.get()).true
         expect(B.get()).true
     })
@@ -23,18 +23,18 @@ describe('buffer', () => {
         s.buffer(A, s.Low, B)
 
         A.on()
-        s.do()
+        s.forward()
         expect(A.get()).true
         expect(B.get()).true
 
         B.off()
-        s.do()
+        s.forward()
         expect(A.get()).true
         expect(B.get()).false
 
         B.on()
         A.off()
-        s.do()
+        s.forward()
         expect(A.get()).false
         expect(B.get()).true
     })

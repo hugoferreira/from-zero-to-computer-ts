@@ -51,7 +51,7 @@ describe('rom', () => {
         const mem = [0x01, 0x1C, 0x08, 0x1B, 0x01, 0x00, 0x02, 0x02, 0x10]
 
         s.rom(abus, mem, dbus)
-        s.do()
+        s.forward()
 
         mem.forEach((v, ix) => {
             abus.set(ix)
@@ -69,7 +69,7 @@ describe('eprom alu', () => {
 
         const [out, cout] = s.fourbitalu(ain, bin, cin)
 
-        s.do()
+        s.forward()
 
         const testCase = fc.tuple(
             fc.nat(0xF),  // a

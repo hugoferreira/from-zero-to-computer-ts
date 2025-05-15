@@ -7,7 +7,7 @@ describe('flipflop', () => {
 
         const [q, nq, set, reset] = s.flipflop()
 
-        s.do()
+        s.forward()
         expect(q.get()).eq(false)
         expect(nq.get()).eq(true)
 
